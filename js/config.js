@@ -7,6 +7,6 @@
 //          (o workflow de deploy gera este arquivo automaticamente).
 
 export const CONFIG = {
-  SUPABASE_URL: 'https://SEU-PROJETO.supabase.co',
-  SUPABASE_ANON_KEY: 'SUA_CHAVE_ANON_OU_PUBLISHABLE',
+  SUPABASE_URL: 'https://hmzjnutwsungloctxwfi.supabase.co',
+  SUPABASE_ANON_KEY: 'sb_publishable_g43AEFXCDtMLhAvcVjueHg_D2JH69wZ',
 };
