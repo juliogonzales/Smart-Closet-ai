@@ -694,9 +694,8 @@ function renderNewItem() {
           <img src="${d.previewUrl}" alt="Prévia" class="max-h-full max-w-full object-contain">
         </div>
         <div class="mt-3 grid grid-cols-2 gap-2">
-          <button id="rmbg" class="btn btn-soft" ${d.bgRemoved ? 'disabled' : ''}>${icon('scissors')} ${d.bgRemoved ? 'Fundo removido' : 'Remover fundo'}</button>
-          <button id="ai" class="btn btn-soft">${icon('sparkles')} Preencher com IA</button>
-          ${d.bgRemoved ? `<button id="restore" class="btn btn-ghost col-span-2">Restaurar foto original</button>` : ''}
+          <button id="rmbg" class="btn btn-soft" ${d.bgRemoved ? 'disabled' : ''}>${icon('scissors')}${d.bgRemoved ? 'Fundo removido' : 'Remover fundo'}</button>
+          <button id="ai" class="btn btn-soft">${icon('sparkles')} Preencher com IA</button>${d.bgRemoved ? `<button id="restore" class="btn btn-ghost col-span-2">Restaurar foto original</button>` : ''}
           <button id="other" class="btn btn-ghost col-span-2">Trocar foto</button>
         </div>` : `
         <p class="mt-3 text-sm text-stone-500">Dica: fotografe a peça sobre uma superfície lisa, com boa luz.</p>
@@ -737,7 +736,7 @@ function renderNewItem() {
     setBusy(true, 'A IA está analisando a peça…');
     try {
       const image_base64 = await blobToBase64Jpeg(d.blob);
-      const { data, error } = await sb.functions.invoke('analyze-clothing', { body: { image_base64, mime_type: 'image/jpeg' } });
+      const { data, error } = await sb.functions.invoke('bright-function', { body: { image_base64, mime_type: 'image/jpeg' } });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       if (data.name && !d.name) d.name = data.name;
@@ -820,7 +819,7 @@ function renderCreate() {
         </div>
         <div><span class="label">Clima</span>
           <div class="flex flex-wrap gap-2">
-            ${WEATHERS.map((w) => `<button data-w="${w.id}" class="chip ${g.weather === w.id || g.weather.startsWith(w.id + ' ') ? 'chip-on' : ''}">${w.label}</button>`).join('')}
+            ${WEATHERS.map((w) => `<button data-w="${w.id}" class="chip ${g.weather === w.id \vert{}\vert{} g.weather.startsWith(w.id + ' ') ? 'chip-on' : ''}">${w.label}</button>`).join('')}
             <button id="geo" class="chip">${icon('pin', 'h-4 w-4')} Usar minha localização</button>
           </div>
           ${g.weather && !WEATHERS.some((w) => w.id === g.weather) ? `<p class="mt-2 text-xs text-stone-500">Clima atual: ${esc(g.weather)}</p>` : ''}
@@ -835,8 +834,7 @@ function renderCreate() {
         <div class="fade-up mt-8" id="result">
           ${lookCard(r.items)}
           <h2 class="mt-5 font-display text-2xl">${esc(r.title)}</h2>
-          <p class="mt-1 text-sm text-stone-600">${esc(r.description)}</p>
-          ${r.tips ? `<p class="mt-3 rounded-2xl bg-stone-100 p-3 text-sm text-stone-600"><b>Dica:</b> ${esc(r.tips)}</p>` : ''}
+          <p class="mt-1 text-sm text-stone-600">${esc(r.description)}</p>${r.tips ? `<p class="mt-3 rounded-2xl bg-stone-100 p-3 text-sm text-stone-600"><b>Dica:</b> ${esc(r.tips)}</p>` : ''}
           ${r.missing ? `<div class="mt-3 rounded-2xl border border-dashed border-stone-300 p-3 text-sm text-stone-600"><b>Para completar:</b> ${esc(r.missing)}</div>` : ''}
           <div class="mt-5 grid grid-cols-2 gap-2">
             <button id="fav" class="btn ${r.saved_id ? 'btn-primary' : 'btn-soft'}">${icon(r.saved_id ? 'check' : 'heart')} ${r.saved_id ? 'Nos favoritos' : 'Salvar nos Favoritos'}</button>
@@ -847,8 +845,8 @@ function renderCreate() {
 
   $$('[data-occ]').forEach((b) => (b.onclick = () => { g.occasion = g.occasion === b.dataset.occ ? '' : b.dataset.occ; g.customOccasion = ''; renderCreate(); }));
   $('#occ-custom').oninput = (e) => { g.customOccasion = e.target.value; if (e.target.value) g.occasion = ''; };
-  $$('[data-w]').forEach((b) => (b.onclick = () => { g.weather = g.weather === b.dataset.w ? '' : b.dataset.w; renderCreate(); }));
-  $$('[data-st]').forEach((b) => (b.onclick = () => { g.style = g.style === b.dataset.st ? '' : b.dataset.st; renderCreate(); }));
+  $$('[data-w]').forEach((b) => (b.onclick = () => { g.weather = g.weather === b.dataset.w ? '' : b.dataset.w; renderCreate(); })); $$
+('[data-st]').forEach((b) => (b.onclick = () => { g.style = g.style === b.dataset.st ? '' : b.dataset.st; renderCreate(); }));
   $('#geo').onclick = useLocationWeather;
   $('#gen').onclick = generateLook;
   if (r) { $('#fav').onclick = toggleFavorite; $('#share').onclick = shareGenerated; }
@@ -1143,7 +1141,7 @@ function renderProfile() {
         <button id="out" class="btn btn-ghost mt-2 w-full">Sair da conta</button>
         <p class="mt-8 text-center text-xs text-stone-400">Dica: no celular, use “Adicionar à tela inicial” para instalar o app.</p>
       </div>`;
-    $$('[data-s]').forEach((b) => (b.onclick = () => { const n = $('#name').value; toggle(sel, b.dataset.s); p.full_name = n; paint(); }));
+    $$('[data-s]').forEach((b) => (b.onclick = () => { const n =$('#name').value; toggle(sel, b.dataset.s); p.full_name = n; paint(); }));
     $('#save').onclick = async () => {
       setBusy(true, 'Salvando…');
       const { data, error } = await sb.from('profiles').update({ full_name: $('#name').value.trim(), style_preferences: [...sel] }).eq('id', state.user.id).select().single();
