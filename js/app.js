@@ -7,7 +7,8 @@ import { CONFIG } from './config.js';
 const configured =
   CONFIG.SUPABASE_URL &&
   CONFIG.SUPABASE_ANON_KEY &&
-  !CONFIG.SUPABASE_URL.includes('SEU-PROJETO') &&
+  !CONFIG.SUPABASE_URL.includes('SEU-PROJETO') 
+&&
   !CONFIG.SUPABASE_ANON_KEY.startsWith('SUA_CHAVE');
 
 const sb = configured
@@ -29,7 +30,8 @@ const CATEGORIES = {
 };
 const CAT_ORDER = ['outerwear', 'top', 'fullbody', 'bottom', 'shoes', 'accessory'];
 const SEASONS = ['verão', 'outono', 'inverno', 'primavera'];
-const STYLES = ['casual', 'formal', 'esporte fino', 'street', 'esportivo', 'festa', 'minimalista', 'clássico'];
+const STYLES = ['casual', 'formal', 
+'esporte fino', 'street', 'esportivo', 'festa', 'minimalista', 'clássico'];
 const PROFILE_STYLES = ['casual', 'esporte fino', 'street', 'minimalista', 'clássico', 'esportivo', 'elegante', 'boho'];
 const COLORS = {
   preto: '#111827', branco: '#ffffff', cinza: '#9ca3af', bege: '#d6c3a5', marrom: '#7c5a3c',
@@ -49,7 +51,8 @@ const WEATHERS = [
 
 /* ============================================================
    Utilidades de DOM
-   ============================================================ */
+   
+============================================================ */
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const esc = (s = '') =>
@@ -57,24 +60,32 @@ const esc = (s = '') =>
 const view = () => $('#view');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-const P = (d) => `<path stroke-linecap="round" stroke-linejoin="round" d="${d}"/>`;
+const P = (d) => `<path stroke-linecap="round" stroke-linejoin="round" d="${d}"/
+>`;
 const ICONS = {
   home: P('M2.25 12l8.954-8.955a1.126 1.126 0 011.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25'),
-  closet: P('M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z'),
-  sparkles: P('M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z'),
+  closet: P('M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 
+01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z'),
+  sparkles: P('M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 
+3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z'),
   user: P('M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z'),
   plus: P('M12 4.5v15m7.5-7.5h-15'),
   heart: P('M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z'),
-  share: P('M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z'),
-  trash: P('M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0'),
+  share: P('M7.217 
+10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z'),
+  trash: P('M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 
+0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0'),
   x: P('M6 18L18 6M6 6l12 12'),
-  camera: P('M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316zM16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z'),
+  camera: P('M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 
+1.039l-.821 1.316zM16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z'),
   photo: P('M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.41a2.25 2.25 0 013.182 0l2.909 2.91m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z'),
-  refresh: P('M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.183m0-4.991v4.99'),
+  refresh: P('M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 
+8.25 0 0113.803-3.7l3.181 3.183m0-4.991v4.99'),
   check: P('M4.5 12.75l6 6 9-13.5'),
   download: P('M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3'),
   pin: P('M15 10.5a3 3 0 11-6 0 3 3 0 016 0zM19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z'),
-  scissors: P('M7.848 8.25l1.536.887M7.848 8.25a3 3 0 11-5.196-3 3 3 0 015.196 3zm1.536.887a2.165 2.165 0 011.083 1.839c.005.351.054.695.14 1.024M9.384 9.137l2.077 1.199M7.848 15.75l1.536-.887m-1.536.887a3 3 0 11-5.196 3 3 3 0 015.196-3zm1.536-.887a2.165 2.165 0 001.083-1.838c.005-.352.054-.695.14-1.025m-1.223 2.863l2.077-1.199m0-3.328a4.323 4.323 0 012.068-1.379l5.325-1.628a4.5 4.5 0 012.43-.039m-9.823 5.01l5.325 1.628a4.5 4.5 0 002.43.039'),
+  scissors: P('M7.848 8.25l1.536.887M7.848 8.25a3 3 0 11-5.196-3 3 3 0 015.196 3zm1.536.887a2.165 2.165 0 011.083 1.839c.005.351.054.695.14 1.024M9.384 9.137l2.077 1.199M7.848 
+15.75l1.536-.887m-1.536.887a3 3 0 11-5.196 3 3 3 0 015.196-3zm1.536-.887a2.165 2.165 0 001.083-1.838c.005-.352.054-.695.14-1.025m-1.223 2.863l2.077-1.199m0-3.328a4.323 4.323 0 012.068-1.379l5.325-1.628a4.5 4.5 0 012.43-.039m-9.823 5.01l5.325 1.628a4.5 4.5 0 002.43.039'),
 };
 const icon = (n, cls = 'h-5 w-5') =>
   `<svg class="${cls}" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" aria-hidden="true">${ICONS[n] || ''}</svg>`;
@@ -88,7 +99,8 @@ function toast(msg, type = 'info') {
   setTimeout(() => el.remove(), type === 'error' ? 5200 : 2800);
 }
 
-function setBusy(on, text = 'Carregando…') {
+function setBusy(on, text = 
+'Carregando…') {
   const b = $('#busy');
   $('#busy-text').textContent = text;
   b.classList.toggle('hidden', !on);
@@ -100,7 +112,8 @@ function openModal(inner, { sheet = true } = {}) {
   const root = $('#modal-root');
   root.innerHTML = `
     <div class="fixed inset-0 z-40 flex ${sheet ? 'items-end' : 'items-center'} justify-center bg-stone-900/50" data-backdrop>
-      <div class="${sheet ? 'sheet-up rounded-t-[2rem]' : 'fade-up rounded-[2rem] m-4'} max-h-[92vh] w-full max-w-xl overflow-y-auto bg-white p-5 safe-bottom" role="dialog" aria-modal="true">
+      <div class="${sheet ? 'sheet-up rounded-t-[2rem]' : 'fade-up 
+rounded-[2rem] m-4'} max-h-[92vh] w-full max-w-xl overflow-y-auto bg-white p-5 safe-bottom" role="dialog" aria-modal="true">
         ${inner}
       </div>
     </div>`;
@@ -109,7 +122,8 @@ function openModal(inner, { sheet = true } = {}) {
   $$('[data-close]', root).forEach((b) => b.addEventListener('click', closeModal));
   return root;
 }
-function closeModal() { $('#modal-root').innerHTML = ''; }
+function closeModal() { $
+('#modal-root').innerHTML = ''; }
 
 const modalHeader = (title) => `
   <div class="mb-4 flex items-center justify-between">
@@ -119,7 +133,8 @@ const modalHeader = (title) => `
 
 /* ============================================================
    Estado
-   ============================================================ */
+   
+============================================================ */
 const state = {
   session: null,
   user: null,
@@ -144,7 +159,8 @@ async function loadAll() {
   const uid = state.user.id;
   const [p, c, o] = await Promise.all([
     sb.from('profiles').select('*').eq('id', uid).maybeSingle(),
-    sb.from('clothes').select('*').eq('user_id', uid).order('created_at', { ascending: false }),
+    sb.from('clothes').select('*').eq('
+user_id', uid).order('created_at', { ascending: false }),
     sb.from('outfits').select('*').eq('user_id', uid).order('created_at', { ascending: false }),
   ]);
   if (c.error) throw c.error;
@@ -181,7 +197,8 @@ async function fnError(e) {
   return msg;
 }
 
-/* ============================================================
+/* 
+============================================================
    Layout: navegação inferior
    ============================================================ */
 const NAV = [
@@ -219,7 +236,8 @@ async function route() {
   if (!state.session) {
     renderNav(null);
     if (name === 'register') return renderRegister();
-    if (name === 'reset') return renderReset();
+    if (name === 'reset') return 
+renderReset();
     if (name !== 'login') return go('#/login');
     return renderLogin();
   }
@@ -239,7 +257,8 @@ async function route() {
     case 'onboarding': renderNav(null); return renderOnboarding();
     case 'closet': renderNav('closet'); return arg === 'new' ? renderNewItem() : renderCloset();
     case 'create': renderNav('create'); return renderCreate();
-    case 'profile': renderNav('profile'); return renderProfile();
+    case 'profile': renderNav('profile'); return 
+renderProfile();
     case 'outfit': renderNav('home'); return renderOutfitDetail(arg);
     case 'home': renderNav('home'); return renderHome();
     default: return go('#/home');
@@ -256,7 +275,8 @@ function renderConfigMissing() {
       <h1 class="font-display text-2xl">Falta configurar o Supabase</h1>
       <p class="mt-3 text-sm text-stone-600">Abra o arquivo <code class="rounded bg-stone-100 px-1.5 py-0.5">js/config.js</code> e preencha
       <b>SUPABASE_URL</b> e <b>SUPABASE_ANON_KEY</b> com os dados do seu projeto (Project Settings → API).</p>
-      <p class="mt-3 text-sm text-stone-600">O passo a passo completo está no arquivo <b>SUPABASE_SETUP.md</b>.</p>
+      <p class="mt-3 text-sm text-stone-600">O passo a passo completo está no arquivo 
+<b>SUPABASE_SETUP.md</b>.</p>
     </div>`;
 }
 function renderFatal(e) {
@@ -265,7 +285,8 @@ function renderFatal(e) {
       <h1 class="font-display text-2xl">Não consegui carregar seus dados</h1>
       <p class="mt-3 text-sm text-stone-600">${esc(e?.message || 'Erro desconhecido')}</p>
       <p class="mt-3 text-sm text-stone-600">Se acabou de criar o projeto, confira se o <b>schema.sql</b> foi executado.</p>
-      <button class="btn btn-primary mt-5" id="retry">Tentar de novo</button>
+      <button class="btn btn-primary 
+mt-5" id="retry">Tentar de novo</button>
     </div>`;
   $('#retry').onclick = () => route();
 }
@@ -284,7 +305,8 @@ const authShell = (title, subtitle, body) => `
   </div>`;
 
 function renderLogin() {
-  view().innerHTML = authShell('Smart Closet AI', 'Seu guarda-roupa digital com estilista de IA', `
+  view().innerHTML = authShell('Smart Closet AI', 'Seu guarda-roupa digital com estilista 
+de IA', `
     <form id="f" class="space-y-3">
       <div><label class="label" for="email">E-mail</label><input id="email" type="email" required autocomplete="email" class="input" placeholder="voce@email.com"></div>
       <div><label class="label" for="pw">Senha</label><input id="pw" type="password" required autocomplete="current-password" class="input" placeholder="••••••••"></div>
@@ -297,7 +319,8 @@ function renderLogin() {
   $('#f').onsubmit = async (e) => {
     e.preventDefault();
     setBusy(true, 'Entrando…');
-    const { data, error } = await sb.auth.signInWithPassword({ email: $('#email').value.trim(), password: $('#pw').value });
+    const { data, error } = await sb.auth.signInWithPassword({ email: $('#email').value.trim(), password: $
+('#pw').value });
     setBusy(false);
     if (error) return toast(/Invalid login/i.test(error.message) ? 'E-mail ou senha incorretos.' : error.message, 'error');
     state.session = data.session; state.user = data.user;
@@ -321,13 +344,15 @@ function renderRegister() {
     const { data, error } = await sb.auth.signUp({
       email: $('#email').value.trim(),
       password: $('#pw').value,
-      options: { data: { full_name: $('#name').value.trim() }, emailRedirectTo: location.origin + location.pathname },
+      options: { data: { full_name: $('#name').value.trim() }, 
+emailRedirectTo: location.origin + location.pathname },
     });
     setBusy(false);
     if (error) return toast(error.message, 'error');
     if (data.session) { state.session = data.session; state.user = data.user; state.loaded = false; return go('#/onboarding'); }
     view().innerHTML = authShell('Confirme seu e-mail', 'Quase lá!', `
-      <div class="card p-5 text-sm text-stone-600">Enviamos um link de confirmação para <b>${esc($('#email')?.value || 'seu e-mail')}</b>. Depois de confirmar, é só entrar.
+      <div class="card p-5 text-sm text-stone-600">Enviamos um link de confirmação para <b>${esc($('#email')?.value || 'seu e-mail')}</b>. Depois de confirmar, é só 
+entrar.
         <a href="#/login" class="btn btn-primary mt-4 w-full">Ir para o login</a></div>`);
   };
 }
@@ -336,7 +361,8 @@ function renderReset() {
   view().innerHTML = authShell('Redefinir senha', 'Enviaremos um link para o seu e-mail', `
     <form id="f" class="space-y-3">
       <div><label class="label" for="email">E-mail</label><input id="email" type="email" required class="input"></div>
-      <button class="btn btn-primary w-full" type="submit">Enviar link</button>
+      <button class="btn btn-primary 
+w-full" type="submit">Enviar link</button>
     </form>
     <p class="mt-5 text-center text-sm"><a href="#/login" class="text-stone-500 underline-offset-2 hover:underline">Voltar ao login</a></p>`);
   $('#f').onsubmit = async (e) => {
@@ -352,7 +378,8 @@ function renderReset() {
 function renderUpdatePassword() {
   view().innerHTML = authShell('Nova senha', 'Escolha uma senha que você não use em outro lugar', `
     <form id="f" class="space-y-3">
-      <div><label class="label" for="pw">Nova senha</label><input id="pw" type="password" required minlength="6" autocomplete="new-password" class="input"></div>
+      <div><label class="label" for="pw">Nova senha</label><input id="pw" type="password" required minlength="6" 
+autocomplete="new-password" class="input"></div>
       <button class="btn btn-primary w-full" type="submit">Salvar senha</button>
     </form>`);
   $('#f').onsubmit = async (e) => {
@@ -409,7 +436,8 @@ function renderOnboarding() {
    Look Card (colagem) — usado em tela e no canvas
    ============================================================ */
 const sortItems = (items) =>
-  [...items].sort((a, b) => CAT_ORDER.indexOf(a.category) - CAT_ORDER.indexOf(b.category));
+  [...items].sort((a, b) => CAT_ORDER.indexOf(a.category) - 
+CAT_ORDER.indexOf(b.category));
 
 function layoutItems(items) {
   const s = sortItems(items);
@@ -441,7 +469,8 @@ const miniCollage = (items) => {
   const imgs = sortItems(items).slice(0, 4);
   if (!imgs.length) return `<div class="flex aspect-square items-center justify-center rounded-2xl bg-stone-100 text-stone-300">${icon('photo', 'h-8 w-8')}</div>`;
   return `<div class="grid aspect-square grid-cols-2 gap-1 overflow-hidden rounded-2xl bg-stone-100 p-1.5">
-    ${imgs.map((i) => `<div class="flex items-center justify-center rounded-lg bg-white p-1"><img src="${esc(i.image_url)}" alt="" crossorigin="anonymous" loading="lazy" class="max-h-full max-w-full object-contain"></div>`).join('')}
+    ${imgs.map((i) => `<div class="flex items-center justify-center rounded-lg bg-white p-1"><img src="${esc(i.image_url)}" alt="" crossorigin="anonymous" loading="lazy" class="max-h-full 
+max-w-full object-contain"></div>`).join('')}
   </div>`;
 };
 
@@ -450,7 +479,8 @@ const miniCollage = (items) => {
    ============================================================ */
 function renderHome() {
   const first = (state.profile?.full_name || '').split(' ')[0] || 'olá';
-  const hour = new Date().getHours();
+  const hour = new 
+Date().getHours();
   const greet = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
   const empty = state.clothes.length === 0;
 
@@ -460,14 +490,16 @@ function renderHome() {
       <h1 class="font-display text-3xl">${esc(first)}</h1>
 
       <div class="mt-6 rounded-[2rem] bg-stone-900 p-6 text-white">
-        <p class="text-xs uppercase tracking-widest text-stone-400">Estilista de IA</p>
+        <p class="text-xs 
+uppercase tracking-widest text-stone-400">Estilista de IA</p>
         <h2 class="mt-2 font-display text-2xl leading-snug">${empty ? 'Comece cadastrando suas primeiras peças' : 'O que vamos vestir hoje?'}</h2>
         <a href="${empty ? '#/closet/new' : '#/create'}" class="btn mt-5 bg-white text-stone-900 hover:bg-stone-100">
           ${icon(empty ? 'camera' : 'sparkles')} ${empty ? 'Adicionar peça' : 'Criar look'}
         </a>
       </div>
 
-      <div class="mt-4 grid grid-cols-2 gap-3">
+      <div class="mt-4 grid grid-cols-2 
+gap-3">
         <a href="#/closet" class="card p-4"><p class="font-display text-3xl">${state.clothes.length}</p><p class="text-xs text-stone-500">peças no guarda-roupa</p></a>
         <div class="card p-4"><p class="font-display text-3xl">${state.outfits.length}</p><p class="text-xs text-stone-500">looks favoritos</p></div>
       </div>
@@ -517,7 +549,8 @@ function renderCloset() {
               </div>
             </button>`).join('')}
         </div>` : `
-        <div class="mt-10 text-center text-stone-500">
+        <div class="mt-10 text-center 
+text-stone-500">
           <p class="text-sm">${state.clothes.length ? 'Nenhuma peça nesta categoria.' : 'Seu guarda-roupa está vazio.'}</p>
           <a href="#/closet/new" class="btn btn-primary mt-4">${icon('camera')} Adicionar peça</a>
         </div>`}
@@ -535,13 +568,15 @@ function mountItemForm(container, d) {
   const paint = () => {
     container.innerHTML = `
       <div class="space-y-5">
-        <div><label class="label" for="i-name">Nome (opcional)</label>
+        <div><label class="label" for="i-name">Nome (opcional)</
+label>
           <input id="i-name" class="input" value="${esc(d.name || '')}" placeholder="Ex.: Camisa social branca"></div>
         <div><span class="label">Categoria</span>
           <div class="flex flex-wrap gap-2">${Object.entries(CATEGORIES).map(([k, v]) =>
             `<button type="button" data-cat="${k}" class="chip ${d.category === k ? 'chip-on' : ''}">${v}</button>`).join('')}</div></div>
         <div><span class="label">Cores predominantes</span>
-          <div class="flex flex-wrap gap-2">${chipRow(Object.keys(COLORS), d.colors, 'color', (v) =>
+          <div class="flex 
+flex-wrap gap-2">${chipRow(Object.keys(COLORS), d.colors, 'color', (v) =>
             `<span class="h-3.5 w-3.5 rounded-full ring-1 ring-stone-300" style="background:${COLORS[v]}"></span>${v}`)}</div></div>
         <div><span class="label">Estação</span>
           <div class="flex flex-wrap gap-2">${chipRow(SEASONS, d.tags, 'tag')}</div></div>
@@ -565,7 +600,8 @@ function openItemModal(id) {
   const d = { name: item.name || '', category: item.category, colors: new Set(item.colors || []), tags: new Set(item.tags || []) };
   const root = openModal(`
     ${modalHeader('Peça')}
-    <div class="mb-5 flex aspect-[4/3] items-center justify-center rounded-3xl bg-stone-50 p-4"><img src="${esc(item.image_url)}" alt="" class="max-h-full max-w-full object-contain"></div>
+    <div class="mb-5 flex aspect-[4/3] items-center justify-center rounded-3xl bg-stone-50 p-4"><img 
+src="${esc(item.image_url)}" alt="" class="max-h-full max-w-full object-contain"></div>
     <div id="form"></div>
     <div class="mt-6 flex gap-3">
       <button id="del" class="btn btn-danger">${icon('trash')} Excluir</button>
@@ -574,7 +610,8 @@ function openItemModal(id) {
   mountItemForm($('#form', root), d);
   $('#save', root).onclick = async () => {
     setBusy(true, 'Salvando…');
-    const { data, error } = await sb.from('clothes')
+    const { data, error } = await 
+sb.from('clothes')
       .update({ name: d.name.trim() || null, category: d.category, colors: [...d.colors], tags: [...d.tags] })
       .eq('id', id).select().single();
     setBusy(false);
@@ -594,7 +631,8 @@ function openItemModal(id) {
   };
 }
 
-/* ============================================================
+/* ==============================
+==============================
    Imagens: redimensionar, remover fundo, base64
    ============================================================ */
 const loadImg = (src, cors = true) => new Promise((res, rej) => {
@@ -612,7 +650,8 @@ async function resizeToBlob(fileOrBlob, max = 1200) {
     const img = await loadImg(url, false);
     const k = Math.min(1, max / Math.max(img.width, img.height));
     const cv = document.createElement('canvas');
-    cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
+    cv.width = Math.round(img.width * k); cv.height = 
+Math.round(img.height * k);
     const g = cv.getContext('2d');
     g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height);
     g.drawImage(img, 0, 0, cv.width, cv.height);
@@ -622,7 +661,8 @@ async function resizeToBlob(fileOrBlob, max = 1200) {
 
 // Plano B simples (Canvas): remove fundo liso a partir das bordas por "flood fill".
 async function simpleBgRemove(blob, tol = 38) {
-  const url = URL.createObjectURL(blob);
+  const url = 
+URL.createObjectURL(blob);
   try {
     const img = await loadImg(url, false);
     const k = Math.min(1, 900 / Math.max(img.width, img.height));
@@ -631,7 +671,8 @@ async function simpleBgRemove(blob, tol = 38) {
     const g = cv.getContext('2d', { willReadFrequently: true });
     g.drawImage(img, 0, 0, w, h);
     const im = g.getImageData(0, 0, w, h); const px = im.data;
-    const corners = [[0, 0], [w - 1, 0], [0, h - 1], [w - 1, h - 1]].map(([x, y]) => { const i = (y * w + x) * 4; return [px[i], px[i + 1], px[i + 2]]; });
+    const corners = [[0, 0], [w - 1, 0], 
+[0, h - 1], [w - 1, h - 1]].map(([x, y]) => { const i = (y * w + x) * 4; return [px[i], px[i + 1], px[i + 2]]; });
     const bg = corners.reduce((a, c) => [a[0] + c[0] / 4, a[1] + c[1] / 4, a[2] + c[2] / 4], [0, 0, 0]);
     const near = (i) => Math.abs(px[i] - bg[0]) + Math.abs(px[i + 1] - bg[1]) + Math.abs(px[i + 2] - bg[2]) < tol * 3 * 0.6 + tol;
     const seen = new Uint8Array(w * h); const stack = [];
@@ -690,12 +731,15 @@ function renderNewItem() {
       </div>
 
       ${d.blob ? `
-        <div class="mt-5 flex aspect-square items-center justify-center rounded-3xl p-4 ${d.bgRemoved ? 'checker' : 'bg-stone-100'}">
+        <div class="mt-5 flex aspect-square items-center justify-center rounded-3xl p-4 
+${d.bgRemoved ? 'checker' : 'bg-stone-100'}">
           <img src="${d.previewUrl}" alt="Prévia" class="max-h-full max-w-full object-contain">
         </div>
         <div class="mt-3 grid grid-cols-2 gap-2">
-          <button id="rmbg" class="btn btn-soft" ${d.bgRemoved ? 'disabled' : ''}>${icon('scissors')}${d.bgRemoved ? 'Fundo removido' : 'Remover fundo'}</button>
-          <button id="ai" class="btn btn-soft">${icon('sparkles')} Preencher com IA</button>${d.bgRemoved ? `<button id="restore" class="btn btn-ghost col-span-2">Restaurar foto original</button>` : ''}
+          <button id="rmbg" class="btn btn-soft" ${d.bgRemoved ? 'disabled' : ''}>${icon('scissors')} ${d.bgRemoved ? 'Fundo removido' : 'Remover fundo'}</button>
+          <button id="ai" class="btn btn-soft">${icon('sparkles')} Preencher com IA</button>
+          ${d.bgRemoved ? `<button id="restore" class="btn btn-ghost 
+col-span-2">Restaurar foto original</button>` : ''}
           <button id="other" class="btn btn-ghost col-span-2">Trocar foto</button>
         </div>` : `
         <p class="mt-3 text-sm text-stone-500">Dica: fotografe a peça sobre uma superfície lisa, com boa luz.</p>
@@ -717,7 +761,8 @@ function renderNewItem() {
   if ($('#cam')) { $('#cam').onclick = () => $('#file-cam').click(); $('#gal').onclick = () => $('#file-gal').click(); }
   if (!d.blob) return;
 
-  $('#other').onclick = () => $('#file-gal').click();
+  $('#other').onclick = () => $
+('#file-gal').click();
   mountItemForm($('#form'), d);
 
   $('#rmbg').onclick = async () => {
@@ -736,7 +781,7 @@ function renderNewItem() {
     setBusy(true, 'A IA está analisando a peça…');
     try {
       const image_base64 = await blobToBase64Jpeg(d.blob);
-      const { data, error } = await sb.functions.invoke('bright-function', { body: { image_base64, mime_type: 'image/jpeg' } });
+      const { data, error } = await sb.functions.invoke('analyze-clothing', { body: { image_base64, mime_type: 'image/jpeg' } });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       if (data.name && !d.name) d.name = data.name;
@@ -773,7 +818,8 @@ async function saveItem() {
   if (!d.category) return toast('Escolha a categoria da peça.', 'error');
   setBusy(true, 'Salvando…');
   try {
-    const ext = d.blob.type === 'image/png' ? 'png' : 'jpg';
+    const ext = d.blob.type === 
+'image/png' ? 'png' : 'jpg';
     const path = `${state.user.id}/${crypto.randomUUID()}.${ext}`;
     const up = await sb.storage.from('clothes').upload(path, d.blob, { contentType: d.blob.type, cacheControl: '31536000', upsert: false });
     if (up.error) throw up.error;
@@ -797,7 +843,8 @@ async function saveItem() {
   setBusy(false);
 }
 
-/* ============================================================
+/* 
+============================================================
    Criar look (AI Stylist)
    ============================================================ */
 function renderCreate() {
@@ -815,27 +862,32 @@ function renderCreate() {
           <div class="flex flex-wrap gap-2">
             ${OCCASIONS.map((o) => `<button data-occ="${esc(o)}" class="chip ${g.occasion === o ? 'chip-on' : ''}">${esc(o)}</button>`).join('')}
           </div>
-          <input id="occ-custom" class="input mt-2" placeholder="Ou descreva: ex. casamento na praia" value="${esc(g.customOccasion)}">
+          <input id="occ-custom" class="input mt-2" placeholder="Ou 
+descreva: ex. casamento na praia" value="${esc(g.customOccasion)}">
         </div>
         <div><span class="label">Clima</span>
           <div class="flex flex-wrap gap-2">
-            ${WEATHERS.map((w) => `<button data-w="${w.id}" class="chip ${g.weather === w.id \vert{}\vert{} g.weather.startsWith(w.id + ' ') ? 'chip-on' : ''}">${w.label}</button>`).join('')}
+            ${WEATHERS.map((w) => `<button data-w="${w.id}" class="chip ${g.weather === w.id || g.weather.startsWith(w.id + ' ') ? 'chip-on' : ''}">${w.label}</button>`).join('')}
             <button id="geo" class="chip">${icon('pin', 'h-4 w-4')} Usar minha localização</button>
           </div>
-          ${g.weather && !WEATHERS.some((w) => w.id === g.weather) ? `<p class="mt-2 text-xs text-stone-500">Clima atual: ${esc(g.weather)}</p>` : ''}
+          ${g.weather && !
+WEATHERS.some((w) => w.id === g.weather) ? `<p class="mt-2 text-xs text-stone-500">Clima atual: ${esc(g.weather)}</p>` : ''}
         </div>
         ${prefs.length ? `<div><span class="label">Estilo (opcional)</span>
           <div class="flex flex-wrap gap-2">${prefs.map((s) => `<button data-st="${esc(s)}" class="chip ${g.style === s ? 'chip-on' : ''}">${esc(s)}</button>`).join('')}</div></div>` : ''}
       </div>
 
-      <button id="gen" class="btn btn-primary mt-6 w-full">${icon('sparkles')} ${r ? 'Gerar outro look' : 'Gerar look'}</button>
+      <button id="gen" class="btn btn-primary mt-6 w-full">$
+{icon('sparkles')} ${r ? 'Gerar outro look' : 'Gerar look'}</button>
 
       ${r ? `
         <div class="fade-up mt-8" id="result">
           ${lookCard(r.items)}
           <h2 class="mt-5 font-display text-2xl">${esc(r.title)}</h2>
-          <p class="mt-1 text-sm text-stone-600">${esc(r.description)}</p>${r.tips ? `<p class="mt-3 rounded-2xl bg-stone-100 p-3 text-sm text-stone-600"><b>Dica:</b> ${esc(r.tips)}</p>` : ''}
-          ${r.missing ? `<div class="mt-3 rounded-2xl border border-dashed border-stone-300 p-3 text-sm text-stone-600"><b>Para completar:</b> ${esc(r.missing)}</div>` : ''}
+          <p class="mt-1 text-sm text-stone-600">${esc(r.description)}</p>
+          ${r.tips ? `<p class="mt-3 rounded-2xl bg-stone-100 p-3 text-sm text-stone-600"><b>Dica:</b> ${esc(r.tips)}</p>` : ''}
+          ${r.missing ? `<div class="mt-3 rounded-2xl border 
+border-dashed border-stone-300 p-3 text-sm text-stone-600"><b>Para completar:</b> ${esc(r.missing)}</div>` : ''}
           <div class="mt-5 grid grid-cols-2 gap-2">
             <button id="fav" class="btn ${r.saved_id ? 'btn-primary' : 'btn-soft'}">${icon(r.saved_id ? 'check' : 'heart')} ${r.saved_id ? 'Nos favoritos' : 'Salvar nos Favoritos'}</button>
             <button id="share" class="btn btn-soft">${icon('share')} Compartilhar</button>
@@ -845,9 +897,10 @@ function renderCreate() {
 
   $$('[data-occ]').forEach((b) => (b.onclick = () => { g.occasion = g.occasion === b.dataset.occ ? '' : b.dataset.occ; g.customOccasion = ''; renderCreate(); }));
   $('#occ-custom').oninput = (e) => { g.customOccasion = e.target.value; if (e.target.value) g.occasion = ''; };
-  $$('[data-w]').forEach((b) => (b.onclick = () => { g.weather = g.weather === b.dataset.w ? '' : b.dataset.w; renderCreate(); })); $$
-('[data-st]').forEach((b) => (b.onclick = () => { g.style = g.style === b.dataset.st ? '' : b.dataset.st; renderCreate(); }));
-  $('#geo').onclick = useLocationWeather;
+  $$('[data-w]').forEach((b) => (b.onclick = () => { g.weather = g.weather === b.dataset.w ? '' : b.dataset.w; renderCreate(); }));
+  $$('[data-st]').forEach((b) => (b.onclick = () => { g.style = g.style === b.dataset.st ? '' : b.dataset.st; renderCreate(); }));
+  $('#geo').onclick = 
+useLocationWeather;
   $('#gen').onclick = generateLook;
   if (r) { $('#fav').onclick = toggleFavorite; $('#share').onclick = shareGenerated; }
 }
@@ -856,7 +909,8 @@ async function useLocationWeather() {
   if (!navigator.geolocation) return toast('Seu navegador não permite localização.', 'error');
   setBusy(true, 'Buscando o clima…');
   try {
-    const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, { timeout: 10000 }));
+    const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, 
+{ timeout: 10000 }));
     const { latitude: la, longitude: lo } = pos.coords;
     const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${la}&longitude=${lo}&current=temperature_2m,precipitation,weather_code&timezone=auto`);
     const j = await r.json();
@@ -886,14 +940,16 @@ async function generateLook() {
     if (error) throw error;
     if (data?.error) throw new Error(data.error);
     const byId = clothesById();
-    const items = (data.item_ids || []).map((id) => byId.get(id)).filter(Boolean);
+    const items = (data.item_ids 
+|| []).map((id) => byId.get(id)).filter(Boolean);
     if (!items.length) throw new Error('A IA não achou peças compatíveis. Tente de novo ou cadastre mais peças.');
     g.result = { title: data.title, description: data.description, tips: data.tips, missing: data.missing_suggestions, items, occasion, saved_id: null };
     g.history.push(items.map((i) => i.id).sort().join(','));
   } catch (e) { toast(await fnError(e), 'error'); }
   setBusy(false);
   renderCreate();
-  $('#result')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  $('#result')?.scrollIntoView(
+{ behavior: 'smooth', block: 'start' });
 }
 
 async function saveGenerated() {
@@ -917,7 +973,8 @@ async function toggleFavorite() {
       const { error } = await sb.from('outfits').delete().eq('id', r.saved_id);
       if (error) throw error;
       state.outfits = state.outfits.filter((o) => o.id !== r.saved_id);
-      r.saved_id = null; toast('Removido dos favoritos');
+      r.saved_id = null; 
+toast('Removido dos favoritos');
     } else { await saveGenerated(); toast('Look salvo nos favoritos!', 'ok'); }
   } catch (e) { toast(e.message, 'error'); }
   setBusy(false); renderCreate();
@@ -945,7 +1002,8 @@ function renderOutfitDetail(id) {
       </div>
       <div class="mt-4">${items.length ? lookCard(items) : '<p class="rounded-2xl bg-stone-100 p-5 text-sm text-stone-500">As peças deste look foram removidas do guarda-roupa.</p>'}</div>
       ${o.occasion ? `<p class="mt-4 text-xs uppercase tracking-wide text-stone-400">${esc(o.occasion)}</p>` : ''}
-      <p class="mt-1 text-sm text-stone-600">${esc(o.description || '')}</p>
+      <p class="mt-1 text-sm 
+text-stone-600">${esc(o.description || '')}</p>
       ${o.missing_suggestions ? `<div class="mt-3 rounded-2xl border border-dashed border-stone-300 p-3 text-sm text-stone-600"><b>Para completar:</b> ${esc(o.missing_suggestions)}</div>` : ''}
       <div class="mt-5 grid grid-cols-2 gap-2">
         <button id="share" class="btn btn-primary" ${items.length ? '' : 'disabled'}>${icon('share')} Compartilhar</button>
@@ -989,7 +1047,8 @@ function drawQR(g, text, x, y, size) {
   for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (qr.isDark(r, c)) g.fillRect(x + pad + c * cell, y + pad + r * cell, Math.ceil(cell), Math.ceil(cell));
 }
 
-async function renderStoryCanvas(title, occasion, items, url) {
+async function renderStoryCanvas(title, occasion, 
+items, url) {
   const W = 1080, H = 1920, M = 90;
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
   const g = cv.getContext('2d');
@@ -1016,7 +1075,8 @@ async function renderStoryCanvas(title, occasion, items, url) {
 
   col = 0; let row = 0;
   lay.forEach((l, i) => {
-    const x = M + col * (colW + gap); const w = l.span === 2 ? W - M * 2 : colW; const yy = top + row * (tileH + gap);
+    const x = M + col * (colW + gap); const w = l.span === 2 ? W - M * 2 : colW; const yy = top + row * (tileH + 
+gap);
     g.fillStyle = 'rgba(255,255,255,.88)'; rr(g, x, yy, w, tileH, 36); g.fill();
     const im = imgs[i];
     if (im) {
@@ -1051,7 +1111,8 @@ async function openShare(outfitId) {
     url = shareUrl(outfitId);
     const cv = await renderStoryCanvas(o.title, o.occasion, itemsOf(o), url);
     blob = await canvasToBlob(cv, 'image/png');
-  } catch (e) { setBusy(false); return toast(e.message || 'Erro ao gerar o card', 'error'); }
+  } catch (e) { setBusy(false); return 
+toast(e.message || 'Erro ao gerar o card', 'error'); }
   setBusy(false);
 
   const imgUrl = URL.createObjectURL(blob);
@@ -1059,12 +1120,14 @@ async function openShare(outfitId) {
   const root = openModal(`
     ${modalHeader('Compartilhar look')}
     <img src="${imgUrl}" alt="Card 9:16 do look" class="mx-auto max-h-[52vh] rounded-2xl shadow-md">
-    <p class="mt-4 break-all rounded-2xl bg-stone-100 p-3 text-xs text-stone-600">${esc(url)}</p>
+    <p class="mt-4 break-all rounded-2xl bg-stone-100 p-3 
+text-xs text-stone-600">${esc(url)}</p>
     <div class="mt-4 grid grid-cols-2 gap-2">
       <button id="sh-native" class="btn btn-primary">${icon('share')} Compartilhar</button>
       <a id="sh-dl" class="btn btn-soft" href="${imgUrl}" download="meu-look.png">${icon('download')} Baixar Story</a>
       <button id="sh-copy" class="btn btn-soft col-span-2">Copiar link</button>
-      <button id="sh-private" class="btn btn-ghost col-span-2 text-sm">Tornar este look privado de novo</button>
+      <button id="sh-private" class="btn btn-ghost col-span-2 text-sm">Tornar este look privado 
+de novo</button>
     </div>`);
   const close = () => URL.revokeObjectURL(imgUrl);
   $$('[data-close]', root).forEach((b) => b.addEventListener('click', close));
@@ -1072,7 +1135,8 @@ async function openShare(outfitId) {
   $('#sh-native', root).onclick = async () => {
     try {
       if (navigator.canShare?.({ files: [file] })) await navigator.share({ files: [file], title: o.title, text: `${o.title} — meu look no Smart Closet AI`, url });
-      else if (navigator.share) await navigator.share({ title: o.title, text: o.title, url });
+      else if (navigator.share) await navigator.share({ title: o.title, text: 
+o.title, url });
       else { await navigator.clipboard.writeText(url); toast('Link copiado!', 'ok'); }
     } catch (e) { if (e?.name !== 'AbortError') toast('Não foi possível abrir o compartilhamento.', 'error'); }
   };
@@ -1080,7 +1144,8 @@ async function openShare(outfitId) {
     try { await navigator.clipboard.writeText(url); toast('Link copiado!', 'ok'); }
     catch { toast('Copie o link manualmente.', 'error'); }
   };
-  $('#sh-private', root).onclick = async () => {
+  $('#sh-private', root).onclick = 
+async () => {
     const { error } = await sb.from('outfits').update({ is_public: false }).eq('id', outfitId);
     if (error) return toast(error.message, 'error');
     o.is_public = false; close(); closeModal(); toast('O link público foi desativado.', 'ok');
@@ -1089,7 +1154,8 @@ async function openShare(outfitId) {
 
 /* ============================================================
    Look público (sem login)
-   ============================================================ */
+   ==============================
+============================== */
 async function renderShare(id) {
   view().innerHTML = `<div class="mt-20 text-center text-sm text-stone-400">Carregando look…</div>`;
   if (!id) return renderShareMissing();
@@ -1097,18 +1163,21 @@ async function renderShare(id) {
   if (error || !data) return renderShareMissing();
   view().innerHTML = `
     <div class="fade-up mx-auto max-w-md">
-      <p class="text-center text-xs font-semibold uppercase tracking-widest text-stone-400">Smart Closet AI</p>
+      <p class="text-center 
+text-xs font-semibold uppercase tracking-widest text-stone-400">Smart Closet AI</p>
       <h1 class="mt-3 text-center font-display text-3xl">${esc(data.title)}</h1>
       ${data.owner_name ? `<p class="mt-1 text-center text-sm text-stone-500">por ${esc(data.owner_name)}${data.occasion ? ` · ${esc(data.occasion)}` : ''}</p>` : ''}
       <div class="mt-6">${lookCard(data.items || [])}</div>
       <p class="mt-5 text-sm text-stone-600">${esc(data.description || '')}</p>
-      ${data.missing_suggestions ? `<div class="mt-3 rounded-2xl border border-dashed border-stone-300 p-3 text-sm text-stone-600"><b>Para completar:</b> ${esc(data.missing_suggestions)}</div>` : ''}
+      ${data.missing_suggestions ? 
+`<div class="mt-3 rounded-2xl border border-dashed border-stone-300 p-3 text-sm text-stone-600"><b>Para completar:</b> ${esc(data.missing_suggestions)}</div>` : ''}
       <a href="${state.session ? '#/home' : '#/login'}" class="btn btn-primary mt-8 w-full">${state.session ? 'Ir para o meu closet' : 'Criar meu guarda-roupa digital'}</a>
     </div>`;
 }
 function renderShareMissing() {
   view().innerHTML = `
-    <div class="card mx-auto mt-16 max-w-sm p-6 text-center">
+    <div class="card mx-auto mt-16 
+max-w-sm p-6 text-center">
       <h1 class="font-display text-2xl">Look indisponível</h1>
       <p class="mt-2 text-sm text-stone-500">O link pode ter sido desativado por quem compartilhou.</p>
       <a href="#/login" class="btn btn-primary mt-5">Conhecer o app</a>
@@ -1117,7 +1186,8 @@ function renderShareMissing() {
 
 /* ============================================================
    Perfil
-   ============================================================ */
+   
+============================================================ */
 function renderProfile() {
   const p = state.profile;
   const sel = new Set(p.style_preferences || []);
@@ -1127,21 +1197,24 @@ function renderProfile() {
       <div class="fade-up">
         <h1 class="font-display text-3xl">Perfil</h1>
         <div class="mt-5 flex items-center gap-4">
-          <button id="avatar" class="relative h-20 w-20 shrink-0 overflow-hidden rounded-full bg-stone-200 ring-2 ring-white" aria-label="Trocar foto de perfil">
+          <button id="avatar" 
+class="relative h-20 w-20 shrink-0 overflow-hidden rounded-full bg-stone-200 ring-2 ring-white" aria-label="Trocar foto de perfil">
             ${p.avatar_url ? `<img src="${esc(p.avatar_url)}" alt="" class="h-full w-full object-cover">` : `<span class="flex h-full w-full items-center justify-center font-display text-3xl text-stone-500">${esc(initials)}</span>`}
           </button>
-          <div class="min-w-0"><p class="truncate font-medium">${esc(p.full_name || '')}</p><p class="truncate text-sm text-stone-500">${esc(state.user.email)}</p></div>
+          <div class="min-w-0"><p class="truncate font-medium">${esc(p.full_name || '')}</p><p class="truncate text-sm text-stone-500">$
+{esc(state.user.email)}</p></div>
           <input id="avatar-file" type="file" accept="image/*" class="hidden">
         </div>
 
         <div class="mt-6"><label class="label" for="name">Nome</label><input id="name" class="input" value="${esc(p.full_name || '')}"></div>
         <div class="mt-5"><span class="label">Preferências de estilo</span>
-          <div class="flex flex-wrap gap-2">${PROFILE_STYLES.map((s) => `<button data-s="${esc(s)}" class="chip ${sel.has(s) ? 'chip-on' : ''}">${esc(s)}</button>`).join('')}</div></div>
+          <div class="flex flex-wrap gap-2">${PROFILE_STYLES.map((s) => `<button data-s="${esc(s)}" class="chip ${sel.has(s) ? 'chip-on' : 
+''}">${esc(s)}</button>`).join('')}</div></div>
         <button id="save" class="btn btn-primary mt-6 w-full">Salvar perfil</button>
         <button id="out" class="btn btn-ghost mt-2 w-full">Sair da conta</button>
         <p class="mt-8 text-center text-xs text-stone-400">Dica: no celular, use “Adicionar à tela inicial” para instalar o app.</p>
       </div>`;
-    $$('[data-s]').forEach((b) => (b.onclick = () => { const n =$('#name').value; toggle(sel, b.dataset.s); p.full_name = n; paint(); }));
+    $$('[data-s]').forEach((b) => (b.onclick = () => { const n = $('#name').value; toggle(sel, b.dataset.s); p.full_name = n; paint(); }));
     $('#save').onclick = async () => {
       setBusy(true, 'Salvando…');
       const { data, error } = await sb.from('profiles').update({ full_name: $('#name').value.trim(), style_preferences: [...sel] }).eq('id', state.user.id).select().single();
@@ -1151,7 +1224,8 @@ function renderProfile() {
     };
     $('#out').onclick = async () => { await sb.auth.signOut(); };
     $('#avatar').onclick = () => $('#avatar-file').click();
-    $('#avatar-file').onchange = async (e) => {
+    $('#avatar-file').onchange = async 
+(e) => {
       const f = e.target.files[0]; if (!f) return;
       setBusy(true, 'Enviando foto…');
       try {
@@ -1188,7 +1262,8 @@ async function init() {
     state.session = session; state.user = session?.user ?? null;
     // evita chamadas ao Supabase dentro do callback (podem travar): adia o trabalho
     setTimeout(() => {
-      if (event === 'PASSWORD_RECOVERY') location.hash = '#/update-password';
+      if (event === 'PASSWORD_RECOVERY') location.hash = '#/
+update-password';
       else if (event === 'SIGNED_OUT') { resetState(); location.hash = '#/login'; route(); }
       else if (event === 'SIGNED_IN' && !state.loaded) route();
     }, 0);
