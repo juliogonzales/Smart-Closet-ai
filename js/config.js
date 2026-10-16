@@ -8,5 +8,5 @@
 
 export const CONFIG = {
   SUPABASE_URL: 'https://hmzjnutwsungloctxwfi.supabase.co',
-  SUPABASE_ANON_KEY: 'sb_secret_-ecTmr9KbqFK1H2vXWGEJA_uFUvXZVK',
+  SUPABASE_ANON_KEY: 'sb_publishable_g43AEFXCDtMLhAvcVjueHg_D2JH69wZ',
 };
