@@ -48,13 +48,15 @@ const CATEGORIES = {
 };
 const CAT_ORDER = ['outerwear', 'top', 'fullbody', 'bottom', 'shoes', 'accessory'];
 const LGPD_VERSION = '1.0';
+// Preencha com o e-mail de contato para dúvidas de privacidade (ex.: 'voce@exemplo.com').
+const CONTACT_EMAIL = '';
 const TERMS_HTML = `
-  <p><b>Quem trata seus dados:</b> o responsável pelo Smart Closet AI, contato no próprio app.</p>
+  <p><b>Quem trata seus dados:</b> o responsável pelo Smart Closet AI.${CONTACT_EMAIL ? ` Contato: <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a>.` : ''}</p>
   <p><b>O que guardamos:</b> sua conta, as fotos e dados das peças, os looks e, se você quiser, uma foto sua de corpo inteiro.</p>
   <p><b>Foto de modelo:</b> você envia uma foto por vez e pode trocá-la ou apagá-la quando quiser. Ela fica em área privada, nunca aparece em links públicos e só é usada na função "vestir na pessoa".</p>
   <p><b>Google Gemini:</b> ao vestir a pessoa, a sua foto de modelo e as fotos das peças escolhidas são enviadas ao Google Gemini para gerar a imagem.</p>
-  <p><b>Imagens geradas:</b> ficam em área privada, com link válido por 1 hora. Você pode apagá-las.</p>
-  <p><b>Seus direitos:</b> acessar, corrigir, excluir seus dados e retirar o consentimento a qualquer momento, em Perfil.</p>
+  <p><b>Imagens geradas:</b> ficam em área privada, com link válido por 1 hora. São apagadas automaticamente após 7 dias, e você pode apagá-las antes.</p>
+  <p><b>Seus direitos:</b> acessar, corrigir, excluir seus dados e retirar o consentimento a qualquer momento, em Perfil. Você pode excluir a conta inteira em Perfil > Excluir minha conta.</p>
   <p class="text-xs text-stone-500">Versão ${LGPD_VERSION}. O texto completo está em docs/TERMOS_LGPD.md no repositório.</p>`;
 const SEASONS = ['verão', 'outono', 'inverno', 'primavera'];
 const STYLES = ['casual', 'formal', 'esporte fino', 'street', 'esportivo', 'festa', 'minimalista', 'clássico'];
@@ -1701,6 +1703,8 @@ function renderProfile() {
           <h2 class="text-sm font-semibold">Privacidade</h2>
           <p class="mt-1 text-xs leading-relaxed text-stone-500">Suas fotos e looks ficam no Supabase e só você os acessa (links públicos só existem para os looks que você compartilhar). Fotos e listas de peças vão ao Google Gemini apenas quando você usa os recursos de IA.</p>
           <button id="wipe" class="mt-3 text-xs font-medium text-red-700 underline-offset-2 hover:underline">Apagar todas as minhas peças e looks</button>
+          <button id="delacc" class="mt-3 block text-xs font-medium text-red-700 underline-offset-2 hover:underline">Excluir minha conta</button>
+          ${CONTACT_EMAIL ? `<p class="mt-3 text-xs text-stone-500">Dúvidas sobre seus dados: <a class="underline" href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a></p>` : ''}
         </div>
       </div>`;
     $$('[data-s]').forEach((b) => (b.onclick = () => { name = $('#name').value; toggle(sel, b.dataset.s); p.full_name = name; paint(); }));
@@ -1716,6 +1720,7 @@ function renderProfile() {
     if (inst) inst.onclick = async () => { deferredInstall.prompt(); await deferredInstall.userChoice; deferredInstall = null; renderProfile(); };
     $('#chpw').onclick = openChangePassword;
     $('#wipe').onclick = wipeData;
+    $('#delacc').onclick = deleteAccount;
     $('#avatar').onclick = () => $('#avatar-file').click();
     const bu = $('#body-up'); if (bu) bu.onclick = () => $('#body-file').click();
     const bf = $('#body-file'); if (bf) bf.onchange = (e) => uploadBodyPhoto(e.target.files[0]);
@@ -1758,6 +1763,30 @@ function openChangePassword() {
     setBusy(false);
     if (error) return toast(errMsg(error), 'error');
     closeModal(); toast('Senha atualizada!', 'ok');
+  };
+}
+
+
+async function deleteAccount() {
+  const root = openModal(`
+    ${modalHeader('Excluir sua conta?')}
+    <p class="text-sm text-stone-600">Isso apaga <b>sua conta, peças, looks, fotos e imagens geradas</b>. Não dá para desfazer.</p>
+    <label class="label mt-4" for="del-in">Digite EXCLUIR para confirmar</label>
+    <input id="del-in" class="input" autocomplete="off" autocapitalize="characters">
+    <button id="del-go" class="btn btn-danger mt-4 w-full" disabled>Excluir minha conta</button>`);
+  const input = $('#del-in', root), go_ = $('#del-go', root);
+  input.oninput = () => { go_.disabled = input.value.trim().toUpperCase() !== 'EXCLUIR'; };
+  go_.onclick = async () => {
+    closeModal();
+    setBusy(true, 'Excluindo sua conta…');
+    try {
+      const { data, error } = await sb.functions.invoke('delete-account', { body: {} });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      await sb.auth.signOut();
+      setBusy(false);
+      toast('Conta excluída. Até logo.', 'ok');
+    } catch (e) { setBusy(false); toast(await fnError(e), 'error'); }
   };
 }
 
