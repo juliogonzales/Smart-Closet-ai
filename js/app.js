@@ -47,6 +47,15 @@ const CATEGORIES = {
   accessory: 'Acessório',
 };
 const CAT_ORDER = ['outerwear', 'top', 'fullbody', 'bottom', 'shoes', 'accessory'];
+const LGPD_VERSION = '1.0';
+const TERMS_HTML = `
+  <p><b>Quem trata seus dados:</b> o responsável pelo Smart Closet AI, contato no próprio app.</p>
+  <p><b>O que guardamos:</b> sua conta, as fotos e dados das peças, os looks e, se você quiser, uma foto sua de corpo inteiro.</p>
+  <p><b>Foto de modelo:</b> você envia uma foto por vez e pode trocá-la ou apagá-la quando quiser. Ela fica em área privada, nunca aparece em links públicos e só é usada na função "vestir na pessoa".</p>
+  <p><b>Google Gemini:</b> ao vestir a pessoa, a sua foto de modelo e as fotos das peças escolhidas são enviadas ao Google Gemini para gerar a imagem.</p>
+  <p><b>Imagens geradas:</b> ficam em área privada, com link válido por 1 hora. Você pode apagá-las.</p>
+  <p><b>Seus direitos:</b> acessar, corrigir, excluir seus dados e retirar o consentimento a qualquer momento, em Perfil.</p>
+  <p class="text-xs text-stone-500">Versão ${LGPD_VERSION}. O texto completo está em docs/TERMOS_LGPD.md no repositório.</p>`;
 const SEASONS = ['verão', 'outono', 'inverno', 'primavera'];
 const STYLES = ['casual', 'formal', 'esporte fino', 'street', 'esportivo', 'festa', 'minimalista', 'clássico'];
 const PROFILE_STYLES = ['casual', 'esporte fino', 'street', 'minimalista', 'clássico', 'esportivo', 'elegante', 'boho'];
@@ -486,19 +495,25 @@ function renderRegister() {
       <div><label class="label" for="name">Nome</label><input id="name" required maxlength="80" autocomplete="name" class="input" placeholder="Como quer ser chamada(o)?"></div>
       <div><label class="label" for="email">E-mail</label><input id="email" type="email" required autocomplete="email" class="input"></div>
       <div><label class="label" for="pw">Senha</label>${pwInput('pw', 'new-password', 8)}</div>
+      <label class="flex items-start gap-3 rounded-2xl border border-stone-200 bg-white p-3 text-xs leading-relaxed text-stone-600">
+        <input id="lgpd" type="checkbox" required class="mt-0.5 h-4 w-4 shrink-0 accent-stone-900">
+        <span>Li e concordo com os <button type="button" id="terms" class="font-medium text-stone-900 underline">Termos e Política de Privacidade</button>, inclusive o envio da minha foto de modelo ao Google Gemini para a função "vestir na pessoa" (obrigatório).</span>
+      </label>
       <button class="btn btn-primary w-full" type="submit">Cadastrar</button>
       <p class="text-xs leading-relaxed text-stone-500">Suas fotos e dados ficam guardados no Supabase e só você os vê. Ao usar a IA, a foto da peça ou a lista de peças é enviada ao Google Gemini para gerar a sugestão.</p>
     </form>
     <p class="mt-5 text-center text-sm text-stone-500">Já tem conta? <a href="#/login" class="font-medium text-stone-900 underline-offset-2 hover:underline">Entrar</a></p>`);
   bindPwToggles();
+  $('#terms').onclick = () => openTerms();
   $('#f').onsubmit = async (e) => {
     e.preventDefault();
+    if (!$('#lgpd').checked) return toast('Aceite os termos para criar a conta.', 'error');
     const email = $('#email').value.trim();
     setBusy(true, 'Criando conta…');
     const { data, error } = await sb.auth.signUp({
       email,
       password: $('#pw').value,
-      options: { data: { full_name: $('#name').value.trim() }, emailRedirectTo: location.origin + location.pathname },
+      options: { data: { full_name: $('#name').value.trim(), lgpd_consent_at: new Date().toISOString(), lgpd_consent_version: LGPD_VERSION }, emailRedirectTo: location.origin + location.pathname },
     });
     setBusy(false);
     if (error) {
@@ -589,6 +604,11 @@ function renderOnboarding() {
     const finish = async (withPrefs) => {
       setBusy(true, 'Salvando…');
       const patch = { onboarded: true };
+      const meta = state.user?.user_metadata || {};
+      if (!state.profile?.lgpd_consent_at && meta.lgpd_consent_at) {
+        patch.lgpd_consent_at = meta.lgpd_consent_at;
+        patch.lgpd_consent_version = meta.lgpd_consent_version || LGPD_VERSION;
+      }
       if (withPrefs) { patch.full_name = name.trim() || state.profile.full_name; patch.style_preferences = [...sel]; }
       const { data, error } = await sb.from('profiles').update(patch).eq('id', state.user.id).select().single();
       setBusy(false);
@@ -1257,6 +1277,7 @@ function renderCreate() {
             <button id="fav" class="btn ${r.saved_id ? 'btn-primary' : 'btn-soft'}">${icon(r.saved_id ? 'check' : 'heart')} ${r.saved_id ? 'Nos favoritos' : 'Salvar nos Favoritos'}</button>
             <button id="share" class="btn btn-soft">${icon('share')} Compartilhar</button>
           </div>
+          <button id="tryon" class="btn btn-soft mt-2 w-full">${icon('sparkles')} Vestir na pessoa</button>
         </div>` : ''}
     </div>`;
 
@@ -1271,6 +1292,7 @@ function renderCreate() {
   if (r) {
     $('#fav').onclick = toggleFavorite;
     $('#share').onclick = shareGenerated;
+    $('#tryon').onclick = () => openTryOn(r.items);
     bindSwap($('#result-card'), (itemId) => openSwap(r.items, itemId, applyGeneratedItems));
   }
 }
@@ -1415,9 +1437,11 @@ function renderOutfitDetail(id) {
         <button id="share" class="btn btn-primary" ${items.length ? '' : 'disabled'}>${icon('share')} Compartilhar</button>
         <button id="del" class="btn btn-danger">${icon('trash')} Excluir</button>
       </div>
+      <button id="tryon" class="btn btn-soft mt-2 w-full" ${items.length ? '' : 'disabled'}>${icon('sparkles')} Vestir na pessoa</button>
       ${o.is_public ? `<button id="unshare" class="btn btn-ghost mt-2 w-full text-sm">Desativar link público</button>` : ''}
     </div>`;
   $('#share').onclick = () => openShare(id);
+  $('#tryon').onclick = () => openTryOn(items);
   $('#rename').onclick = async () => {
     const t = await promptDialog({ title: 'Renomear look', label: 'Nome do look', value: o.title });
     if (!t || t === o.title) return;
@@ -1650,6 +1674,21 @@ function renderProfile() {
           <div class="flex flex-wrap gap-2">${PROFILE_STYLES.map((s) => `<button data-s="${esc(s)}" aria-pressed="${sel.has(s)}" class="chip ${sel.has(s) ? 'chip-on' : ''}">${esc(s)}</button>`).join('')}</div></div>
         <button id="save" class="btn btn-primary mt-6 w-full">Salvar perfil</button>
 
+        <div class="mt-8 rounded-2xl border border-stone-200 p-4" id="body-section">
+          <h2 class="text-sm font-semibold">Foto de modelo</h2>
+          <p class="mt-1 text-xs leading-relaxed text-stone-500">Uma foto sua de corpo inteiro, em pé, com fundo simples. Usada só na função "vestir na pessoa". Você pode trocar ou apagar quando quiser.</p>
+          ${p.lgpd_consent_at ? `
+            <div id="body-preview" class="mt-3 flex aspect-[3/4] items-center justify-center overflow-hidden rounded-2xl bg-stone-100 text-xs text-stone-500">${p.body_photo_path ? 'Carregando foto…' : 'Nenhuma foto ainda'}</div>
+            <div class="mt-3 grid grid-cols-2 gap-2">
+              <button id="body-up" class="btn btn-soft">${icon('camera')} ${p.body_photo_path ? 'Trocar foto' : 'Enviar foto'}</button>
+              ${p.body_photo_path ? `<button id="body-del" class="btn btn-danger">Apagar foto</button>` : '<span></span>'}
+            </div>
+            <button id="body-revoke" class="mt-3 w-full text-xs font-medium text-stone-500 underline-offset-2 hover:underline">Retirar consentimento e apagar foto e imagens geradas</button>
+            <input id="body-file" type="file" accept="image/*" class="hidden">` : `
+            <p class="mt-3 rounded-2xl bg-stone-100 p-3 text-xs text-stone-600">Para usar "vestir na pessoa", aceite o uso da foto de modelo.</p>
+            <button id="body-accept" class="btn btn-primary mt-3 w-full">Ver termo e aceitar</button>`}
+        </div>
+
         <div class="mt-8 space-y-2">
           ${canInstall ? `<button id="install" class="btn btn-soft w-full">${icon('download')} Instalar o app</button>` : ''}
           ${iosHint ? `<p class="rounded-2xl bg-stone-100 p-3 text-xs text-stone-600">Para instalar no iPhone: toque em Compartilhar e depois em “Adicionar à Tela de Início”.</p>` : ''}
@@ -1678,6 +1717,12 @@ function renderProfile() {
     $('#chpw').onclick = openChangePassword;
     $('#wipe').onclick = wipeData;
     $('#avatar').onclick = () => $('#avatar-file').click();
+    const bu = $('#body-up'); if (bu) bu.onclick = () => $('#body-file').click();
+    const bf = $('#body-file'); if (bf) bf.onchange = (e) => uploadBodyPhoto(e.target.files[0]);
+    const bd = $('#body-del'); if (bd) bd.onclick = () => removeBodyPhoto(false);
+    const br = $('#body-revoke'); if (br) br.onclick = () => removeBodyPhoto(true);
+    const ba = $('#body-accept'); if (ba) ba.onclick = () => openConsentModal();
+    if (p.body_photo_path) loadBodyPreview(p.body_photo_path);
     $('#avatar-file').onchange = async (e) => {
       const f = e.target.files[0]; if (!f) return;
       setBusy(true, 'Enviando foto…');
@@ -1730,7 +1775,7 @@ async function wipeData() {
     setBusy(true, 'Apagando…');
     try {
       const uid = state.user.id;
-      for (const bucket of ['clothes', 'avatars']) {
+      for (const bucket of ['clothes', 'avatars', 'body-photos', 'tryon']) {
         const { data: files } = await sb.storage.from(bucket).list(uid, { limit: 1000 });
         if (files?.length) await sb.storage.from(bucket).remove(files.map((f) => `${uid}/${f.name}`));
       }
@@ -1738,12 +1783,139 @@ async function wipeData() {
       if (o.error) throw o.error;
       const c = await sb.from('clothes').delete().eq('user_id', uid);
       if (c.error) throw c.error;
-      await sb.from('profiles').update({ avatar_url: null }).eq('id', uid);
+      await sb.from('profiles').update({ avatar_url: null, body_photo_path: null, lgpd_consent_at: null, lgpd_consent_version: null }).eq('id', uid);
+      if (state.profile) Object.assign(state.profile, { body_photo_path: null, lgpd_consent_at: null, lgpd_consent_version: null });
       state.clothes = []; state.outfits = []; state.gen = newGen();
       if (state.profile) state.profile.avatar_url = null;
       toast('Tudo apagado.', 'ok');
     } catch (e) { toast(errMsg(e), 'error'); }
     setBusy(false); renderProfile();
+  };
+}
+
+/* ============================================================
+   Foto de modelo + "vestir na pessoa" (LGPD)
+   ============================================================ */
+function openTerms() {
+  const root = openModal(`
+    ${modalHeader('Termos e privacidade')}
+    <div class="space-y-3 text-sm leading-relaxed text-stone-600">${TERMS_HTML}</div>
+    <button id="terms-ok" class="btn btn-primary mt-5 w-full">Entendi</button>`);
+  $('#terms-ok', root).onclick = () => closeModal();
+}
+
+function openConsentModal() {
+  const root = openModal(`
+    ${modalHeader('Foto de modelo')}
+    <div class="space-y-3 text-sm leading-relaxed text-stone-600">${TERMS_HTML}</div>
+    <label class="mt-4 flex items-start gap-3 text-sm text-stone-700">
+      <input id="cons" type="checkbox" class="mt-0.5 h-4 w-4 accent-stone-900">
+      <span>Concordo com o uso da minha foto de modelo, conforme descrito acima.</span>
+    </label>
+    <button id="cons-go" class="btn btn-primary mt-4 w-full" disabled>Aceitar e continuar</button>`);
+  $('#cons', root).onchange = (e) => { $('#cons-go', root).disabled = !e.target.checked; };
+  $('#cons-go', root).onclick = async () => {
+    closeModal();
+    setBusy(true, 'Salvando consentimento…');
+    try {
+      await saveConsent(true);
+      toast('Consentimento salvo. Agora envie sua foto.', 'ok');
+    } catch (e) { toast(errMsg(e), 'error'); }
+    setBusy(false); renderProfile();
+  };
+}
+
+async function saveConsent(accepted) {
+  const patch = accepted
+    ? { lgpd_consent_at: new Date().toISOString(), lgpd_consent_version: LGPD_VERSION }
+    : { lgpd_consent_at: null, lgpd_consent_version: null };
+  const { data, error } = await sb.from('profiles').update(patch).eq('id', state.user.id).select().single();
+  if (error) throw error;
+  Object.assign(state.profile, data);
+}
+
+async function uploadBodyPhoto(file) {
+  if (!file) return;
+  setBusy(true, 'Enviando foto de modelo…');
+  try {
+    const blob = await resizeToBlob(file, 1024);
+    const path = `${state.user.id}/body-${Date.now()}.jpg`;
+    const up = await sb.storage.from('body-photos').upload(path, blob, { contentType: 'image/jpeg', upsert: false });
+    if (up.error) throw up.error;
+    const old = state.profile.body_photo_path;
+    const { data, error } = await sb.from('profiles').update({ body_photo_path: path }).eq('id', state.user.id).select().single();
+    if (error) { await sb.storage.from('body-photos').remove([path]); throw error; }
+    Object.assign(state.profile, data);
+    if (old) await sb.storage.from('body-photos').remove([old]);
+    toast('Foto de modelo salva!', 'ok');
+  } catch (e) { toast(errMsg(e), 'error'); }
+  setBusy(false); renderProfile();
+}
+
+async function removeBodyPhoto(revoke) {
+  const q = revoke
+    ? 'Retirar o consentimento e apagar sua foto de modelo e as imagens geradas?'
+    : 'Apagar sua foto de modelo?';
+  if (!window.confirm(q)) return;
+  setBusy(true, 'Apagando…');
+  try {
+    const uid = state.user.id;
+    const path = state.profile.body_photo_path;
+    if (path) await sb.storage.from('body-photos').remove([path]);
+    if (revoke) {
+      const { data: files } = await sb.storage.from('tryon').list(uid, { limit: 1000 });
+      if (files?.length) await sb.storage.from('tryon').remove(files.map((f) => `${uid}/${f.name}`));
+    }
+    const patch = { body_photo_path: null };
+    if (revoke) { patch.lgpd_consent_at = null; patch.lgpd_consent_version = null; }
+    const { data, error } = await sb.from('profiles').update(patch).eq('id', uid).select().single();
+    if (error) throw error;
+    Object.assign(state.profile, data);
+    toast(revoke ? 'Consentimento retirado e dados apagados.' : 'Foto apagada.', 'ok');
+  } catch (e) { toast(errMsg(e), 'error'); }
+  setBusy(false); renderProfile();
+}
+
+async function loadBodyPreview(path) {
+  const { data, error } = await sb.storage.from('body-photos').createSignedUrl(path, 600);
+  const box = $('#body-preview');
+  if (error || !data || !box) return;
+  box.innerHTML = `<img src="${esc(data.signedUrl)}" alt="Sua foto de modelo" class="h-full w-full object-contain">`;
+}
+
+async function openTryOn(items) {
+  if (!state.profile?.lgpd_consent_at) {
+    toast('Aceite o uso da foto de modelo no Perfil para continuar.', 'error');
+    return go('#/profile');
+  }
+  if (!state.profile?.body_photo_path) {
+    toast('Envie sua foto de corpo inteiro no Perfil primeiro.', 'error');
+    return go('#/profile');
+  }
+  const root = openModal(`
+    ${modalHeader('Vestir na pessoa')}
+    <p class="text-sm text-stone-600">A IA gera uma imagem sua usando estas peças. Pode levar até um minuto.</p>
+    <div class="mt-4 flex flex-wrap gap-2">${items.map((i) => `<div class="h-16 w-16 rounded-xl bg-stone-50 p-1"><img src="${esc(i.image_url)}" alt="" class="h-full w-full object-contain"></div>`).join('')}</div>
+    <button id="tryon-go" class="btn btn-primary mt-5 w-full">${icon('sparkles')} Gerar imagem</button>
+    <div id="tryon-out" class="mt-5"></div>`);
+  $('#tryon-go', root).onclick = async () => {
+    const btn = $('#tryon-go', root);
+    btn.disabled = true; btn.textContent = 'Gerando…';
+    try {
+      const { data, error } = await withTimeout(
+        sb.functions.invoke('tryon', { body: { item_ids: items.map((i) => i.id) } }),
+        90000, 'A geração demorou demais. Tente de novo.');
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      $('#tryon-out', root).innerHTML = `
+        <img src="${esc(data.url)}" alt="Você vestindo o look" class="w-full rounded-3xl">
+        <p class="mt-2 text-xs text-stone-500">O link vale por 1 hora. A imagem fica guardada só para você.</p>
+        <a href="${esc(data.url)}" target="_blank" rel="noopener" class="btn btn-soft mt-3 w-full">Abrir ou salvar imagem</a>`;
+      btn.remove();
+    } catch (e) {
+      toast(await fnError(e), 'error');
+      btn.disabled = false; btn.innerHTML = `${icon('sparkles')} Tentar de novo`;
+    }
   };
 }
 
