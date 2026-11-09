@@ -28,8 +28,7 @@ create table if not exists public.profiles (
   avatar_url        text,
   style_preferences jsonb not null default '[]'::jsonb,
   onboarded         boolean not null default false,
-  created_at        timestamptz not 
-null default now()
+  created_at        timestamptz not null default now()
 );
 
 create table if not exists public.clothes (
@@ -71,8 +70,7 @@ create table if not exists public.ai_usage (
 alter table public.profiles add column if not exists onboarded boolean not null default false;
 alter table public.clothes  add column if not exists storage_path text;
 alter table public.clothes  add column if not exists name text;
-alter table public.outfits  add column if not exists 
-missing_suggestions text;
+alter table public.outfits  add column if not exists missing_suggestions text;
 
 create index if not exists clothes_user_idx
   on public.clothes (user_id, created_at desc);
@@ -82,8 +80,7 @@ create index if not exists ai_usage_user_idx
   on public.ai_usage (user_id, kind, created_at desc);
 
 -- ---------------------------------------------------------------------
--- 3. Validacoes (limites de 
-tamanho)
+-- 3. Validacoes (limites de tamanho)
 -- ---------------------------------------------------------------------
 do $$
 begin
@@ -103,8 +100,7 @@ begin
     alter table public.clothes add constraint clothes_tags_max
       check (cardinality(tags) <= 20);
   end if;
-  if not exists (select 1 from 
-pg_constraint where conname = 'profiles_name_len') then
+  if not exists (select 1 from pg_constraint where conname = 'profiles_name_len') then
     alter table public.profiles add constraint profiles_name_len
       check (full_name is null or char_length(full_name) <= 80);
   end if;
@@ -115,8 +111,7 @@ end $$;
 -- ---------------------------------------------------------------------
 
 -- 4.1 Cria o profile quando alguem se cadastra
-create or replace function 
-public.handle_new_user()
+create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
 security definer
@@ -199,8 +194,7 @@ create trigger outfits_limit
   for each row execute function public.enforce_row_limits();
 
 -- Funcoes de gatilho nao devem ser chamaveis pela API publica
-revoke execute on function 
-public.handle_new_user() from public, anon, authenticated;
+revoke execute on function public.handle_new_user() from public, anon, authenticated;
 revoke execute on function public.clothes_cleanup_outfits() from public, anon, authenticated;
 revoke execute on function public.enforce_row_limits() from public, anon, authenticated;
 
@@ -209,8 +203,7 @@ revoke execute on function public.enforce_row_limits() from public, anon, authen
 -- ---------------------------------------------------------------------
 grant usage on schema public to anon, authenticated;
 grant select, insert, update, delete
-  on public.profiles, public.clothes, 
-public.outfits to authenticated;
+  on public.profiles, public.clothes, public.outfits to authenticated;
 grant select, insert on public.ai_usage to authenticated;
 
 alter table public.profiles enable row level security;
@@ -235,8 +228,7 @@ drop policy if exists "clothes_select_own" on public.clothes;
 drop policy if exists "clothes_insert_own" on public.clothes;
 drop policy if exists "clothes_update_own" on public.clothes;
 drop policy if exists "clothes_delete_own" on public.clothes;
-create policy "clothes_select_own" 
-on public.clothes
+create policy "clothes_select_own" on public.clothes
   for select to authenticated using (user_id = auth.uid());
 create policy "clothes_insert_own" on public.clothes
   for insert to authenticated with check (user_id = auth.uid());
@@ -246,16 +238,14 @@ create policy "clothes_update_own" on public.clothes
 create policy "clothes_delete_own" on public.clothes
   for delete to authenticated using (user_id = auth.uid());
 
--- outfits: SOMENTE o dono acessa a 
-tabela.
+-- outfits: SOMENTE o dono acessa a tabela.
 -- (A versao anterior deixava qualquer pessoa listar todos os looks
 --  publicos. Agora o acesso publico e so pela funcao get_public_outfit,
 --  que exige o id do look.)
 drop policy if exists "outfits_select_own_or_public" on public.outfits;
 drop policy if exists "outfits_select_own" on public.outfits;
 drop policy if exists "outfits_insert_own" on public.outfits;
-drop policy if exists "outfits_update_own" on 
-public.outfits;
+drop policy if exists "outfits_update_own" on public.outfits;
 drop policy if exists "outfits_delete_own" on public.outfits;
 create policy "outfits_select_own" on public.outfits
   for select to authenticated using (user_id = auth.uid());
@@ -264,8 +254,7 @@ create policy "outfits_insert_own" on public.outfits
 create policy "outfits_update_own" on public.outfits
   for update to authenticated
   using (user_id = auth.uid()) with check (user_id = auth.uid());
-create policy "outfits_delete_own" 
-on public.outfits
+create policy "outfits_delete_own" on public.outfits
   for delete to authenticated using (user_id = auth.uid());
 
 -- ai_usage: so le e grava o proprio uso (sem update/delete: nao da para
@@ -334,16 +323,14 @@ on conflict (id) do update
       file_size_limit = excluded.file_size_limit,
       allowed_mime_types = excluded.allowed_mime_types;
 
-drop policy if exists 
-"clothes_files_select_own" on storage.objects;
+drop policy if exists "clothes_files_select_own" on storage.objects;
 drop policy if exists "clothes_files_insert_own" on storage.objects;
 drop policy if exists "clothes_files_update_own" on storage.objects;
 drop policy if exists "clothes_files_delete_own" on storage.objects;
 create policy "clothes_files_select_own" on storage.objects
   for select to authenticated
   using (bucket_id = 'clothes'
-         and (storage.foldername(name))[1] = 
-auth.uid()::text);
+         and (storage.foldername(name))[1] = auth.uid()::text);
 create policy "clothes_files_insert_own" on storage.objects
   for insert to authenticated
   with check (bucket_id = 'clothes'
@@ -352,8 +339,7 @@ create policy "clothes_files_update_own" on storage.objects
   for update to authenticated
   using (bucket_id = 'clothes'
          and (storage.foldername(name))[1] = auth.uid()::text);
-create policy 
-"clothes_files_delete_own" on storage.objects
+create policy "clothes_files_delete_own" on storage.objects
   for delete to authenticated
   using (bucket_id = 'clothes'
          and (storage.foldername(name))[1] = auth.uid()::text);
@@ -361,8 +347,7 @@ create policy
 drop policy if exists "avatars_files_select_own" on storage.objects;
 drop policy if exists "avatars_files_insert_own" on storage.objects;
 drop policy if exists "avatars_files_update_own" on storage.objects;
-drop policy if exists 
-"avatars_files_delete_own" on storage.objects;
+drop policy if exists "avatars_files_delete_own" on storage.objects;
 create policy "avatars_files_select_own" on storage.objects
   for select to authenticated
   using (bucket_id = 'avatars'
@@ -380,8 +365,7 @@ create policy "avatars_files_delete_own" on storage.objects
   using (bucket_id = 'avatars'
          and (storage.foldername(name))[1] = auth.uid()::text);
 
--- ---------------------------------------------------
-------------------
+-- ---------------------------------------------------------------------
 -- 8. Conferencia: este resultado aparece ao final da execucao
 -- ---------------------------------------------------------------------
 select 'tabelas' as item,
