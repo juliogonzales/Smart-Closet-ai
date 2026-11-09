@@ -1995,8 +1995,11 @@ async function runDiagnostics() {
 
   // 6) Privacidade: anônimo não deve listar looks
   try {
+    // Sem login, o banco responde 200 com lista vazia quando a privacidade está correta.
+    // Por isso olhamos o conteúdo da resposta, e não só o código HTTP.
     const r = await fetch(`${url}/rest/v1/outfits?select=id&limit=1`, { headers: { apikey: key } });
-    if (r.status === 200) add('warn', 'Privacidade dos looks', 'Visitantes sem login conseguem listar looks públicos. Rode o schema.sql atualizado para corrigir.');
+    const rows = r.ok ? await r.json().catch(() => []) : [];
+    if (r.ok && Array.isArray(rows) && rows.length > 0) add('warn', 'Privacidade dos looks', 'Visitantes sem login conseguem listar looks públicos. Rode o schema.sql atualizado para corrigir.');
     else add('ok', 'Privacidade dos looks', 'visitantes não listam looks');
   } catch { add('warn', 'Privacidade dos looks', 'não consegui testar'); }
 
