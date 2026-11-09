@@ -1914,7 +1914,17 @@ async function openTryOn(items) {
       btn.remove();
     } catch (e) {
       toast(await fnError(e), 'error');
-      btn.disabled = false; btn.innerHTML = `${icon('sparkles')} Tentar de novo`;
+      // Mantém o botão travado por 20 segundos, com contagem regressiva.
+      let left = 20;
+      btn.disabled = true;
+      const tick = () => {
+        if (!btn.isConnected) return;
+        if (left <= 0) { btn.disabled = false; btn.innerHTML = `${icon('sparkles')} Tentar de novo`; return; }
+        btn.textContent = `Aguarde ${left}s…`;
+        left -= 1;
+        setTimeout(tick, 1000);
+      };
+      tick();
     }
   };
 }
