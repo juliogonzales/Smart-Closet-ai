@@ -12,12 +12,16 @@ Guarda-roupa digital com estilista de IA. PWA estático (HTML + JS + Tailwind vi
 - Trocar peças do look, fixar uma peça, favoritos
 - Cartão 9:16 para Stories, link público e QR Code
 - Perfil, troca de senha, apagar dados, limite diário de IA por usuário
+- "Vestir na pessoa": gera uma imagem sua vestindo o look (foto de modelo + consentimento LGPD)
 - Tela de diagnóstico em `#/diagnostico`
 
 ## Estrutura
 - `index.html`, `js/app.js`, `js/config.js`, `sw.js`, `manifest.webmanifest`, `icons/`
 - `supabase/schema.sql` — tabelas, RLS, buckets, RPC (rode no SQL Editor)
+- `supabase/migrations/002_tryon.sql` — foto de modelo, consentimento LGPD e buckets privados
+- `supabase/functions/tryon` — geração da imagem "vestir na pessoa"
+- `docs/TERMOS_LGPD.md` — texto do termo de consentimento (revisar com advogado)
 - `supabase/functions/stylist` e `analyze-clothing` — Edge Functions de IA
 
 ## Configuração
-Veja `SUPABASE_SETUP.md`. A chave em `js/config.js` é pública (publishable/anon); chaves de IA ficam só nos Secrets das Edge Functions.
+Veja `DEPLOY_GITHUB_PAGES.md` (publicação) e `SUPABASE_SETUP.md` (banco e chaves). A chave em `js/config.js` é pública (publishable/anon); chaves de IA ficam só nos Secrets das Edge Functions.
