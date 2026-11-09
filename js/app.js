@@ -1026,33 +1026,59 @@ async function autocrop(blob, pad = 0.06) {
   } finally { URL.revokeObjectURL(url); }
 }
 
-// Remoção de fundo por IA rodando no navegador (carrega sob demanda; ~40MB na 1ª vez).
+// Verifica se o fundo é liso: a maioria das cores nas bordas precisa ser parecida.
+// Cama, lençol estampado, cabide ou tapete tendem a reprovar.
+async function hasPlainBackground(blob) {
+  const url = URL.createObjectURL(blob);
+  try {
+    const img = await loadImg(url, false);
+    const k = Math.min(1, 200 / Math.max(img.width, img.height));
+    const w = Math.max(1, Math.round(img.width * k)), h = Math.max(1, Math.round(img.height * k));
+    const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+    const g = cv.getContext('2d', { willReadFrequently: true });
+    g.drawImage(img, 0, 0, w, h);
+    const px = g.getImageData(0, 0, w, h).data;
+    const border = [];
+    const add = (x, y) => { const i = (y * w + x) * 4; border.push([px[i], px[i + 1], px[i + 2]]); };
+    for (let x = 0; x < w; x++) { add(x, 0); add(x, h - 1); }
+    for (let y = 0; y < h; y++) { add(0, y); add(w - 1, y); }
+    const mean = [0, 1, 2].map((c) => border.reduce((s, p) => s + p[c], 0) / border.length);
+    const same = border.filter((p) => Math.abs(p[0] - mean[0]) + Math.abs(p[1] - mean[1]) + Math.abs(p[2] - mean[2]) < 60).length;
+    return same / border.length >= 0.9;
+  } finally { URL.revokeObjectURL(url); }
+}
+
+// Remoção de fundo: IA primeiro (funciona em cama, cabide e fundo colorido).
+// O plano B por cor só roda se o fundo for liso; caso contrário a foto original é preservada.
 async function removeBackground(blob) {
   let method = 'ia', out;
   try {
-    const mod = await withTimeout(import('https://esm.sh/@imgly/background-removal@1.5.5'), 25000, 'timeout');
+    const mod = await withTimeout(import('https://esm.sh/@imgly/background-removal@1.5.5'), 30000, 'timeout');
     const fn = mod.removeBackground || mod.default;
     out = await withTimeout(fn(blob, {
       output: { format: 'image/png' },
       progress: (key, cur, total) => {
         if (total) setBusyText(`Removendo o fundo… ${Math.min(99, Math.round((cur / total) * 100))}%`);
       },
-    }), 90000, 'timeout');
+    }), 150000, 'timeout');
   } catch (e) {
-    console.warn('IA de fundo indisponível, usando plano B', e);
+    console.warn('IA de fundo indisponível', e);
+    const plain = await hasPlainBackground(blob);
+    if (!plain) {
+      throw new Error('Não consegui recortar a peça automaticamente: o fundo tem textura (cama, lençol, cabide). Salve a foto sem remover o fundo ou tente de novo com a peça bem visível.');
+    }
     method = 'simples';
     setBusyText('Removendo o fundo (modo simples)…');
     out = await simpleBgRemove(blob);
   }
-  const cropped = await autocrop(out);
-  if (cropped.opaque < 0.04 && method === 'ia') {
-    // IA apagou quase tudo: tenta o modo simples antes de desistir
-    const alt = await autocrop(await simpleBgRemove(blob));
-    if (alt.opaque >= 0.04) return { blob: alt.blob, method: 'simples' };
-    throw new Error('Não consegui separar a peça do fundo nesta foto. Use uma foto com fundo liso ou salve sem remover o fundo.');
+  let cropped = await autocrop(out);
+  if (cropped.opaque < 0.03 && method === 'ia' && await hasPlainBackground(blob)) {
+    // IA apagou quase tudo num fundo liso: tenta o modo simples antes de desistir
+    cropped = await autocrop(await simpleBgRemove(blob));
+    method = 'simples';
   }
-  if (cropped.opaque < 0.04) {
-    throw new Error('Não consegui separar a peça do fundo nesta foto. Use uma foto com fundo liso ou salve sem remover o fundo.');
+  if (cropped.opaque < 0.03) {
+    throw new Error('Não consegui separar a peça do fundo nesta foto. Salve sem remover o fundo ou tire outra foto com a peça bem visível.');
   }
   return { blob: cropped.blob, method };
 }
