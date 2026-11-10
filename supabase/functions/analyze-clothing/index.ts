@@ -32,8 +32,7 @@ class HttpError extends Error {
 
 const CATEGORIES = ['top', 'bottom', 'shoes', 'accessory', 'outerwear', 'fullbody'];
 const COLORS = [
-  'preto', 'branco', 'cinza', 'bege', 
-'marrom', 'azul', 'azul-marinho',
+  'preto', 'branco', 'cinza', 'bege', 'marrom', 'azul', 'azul-marinho',
   'verde', 'vermelho', 'rosa', 'amarelo', 'laranja', 'roxo', 'jeans',
 ];
 const TAGS = [
@@ -44,8 +43,7 @@ const MIMES = ['image/jpeg', 'image/png', 'image/webp'];
 
 const SYSTEM =
   'Você cataloga peças de roupa a partir de fotos. ' +
-  'Responda SEMPRE e SOMENTE com JSON válido, sem texto fora do 
-JSON.';
+  'Responda SEMPRE e SOMENTE com JSON válido, sem texto fora do JSON.';
 
 const PROMPT = `Analise a foto desta peça de vestuário e responda neste formato exato:
 {"name": string, "category": string, "colors": [string], "tags": [string]}
@@ -68,8 +66,7 @@ function friendlyAiError(provider: string, status: number, body: string) {
     return new HttpError(502, 'A chave da IA foi recusada. Confira o secret da chave nas Edge Functions.');
   }
   if (status === 404) {
-    return new HttpError(502, 'O modelo de IA configurado não 
-existe. Confira o secret de modelo (GEMINI_MODEL).');
+    return new HttpError(502, 'O modelo de IA configurado não existe. Confira o secret de modelo (GEMINI_MODEL).');
   }
   return new HttpError(502, 'A IA não conseguiu analisar a foto agora. Tente de novo.');
 }
@@ -80,8 +77,7 @@ async function postWithRetry(url: string, init: RequestInit, provider: string) {
     const res = await fetch(url, init);
     if (res.ok) return res;
     last = res;
-    if (![429, 500, 502, 
-503].includes(res.status)) break;
+    if (![429, 500, 502, 503].includes(res.status)) break;
     if (attempt === 0) await sleep(1200);
   }
   throw friendlyAiError(provider, last!.status, await last!.text());
@@ -122,11 +118,11 @@ async function askVision(b64: string, mime: string): Promise<string> {
 
   const key = Deno.env.get('GEMINI_API_KEY');
   if (!key) throw new HttpError(500, 'GEMINI_API_KEY não configurada nos Secrets.');
-  const model = Deno.env.get('GEMINI_MODEL') ?? 'gemini-2.5-flash';
+  const model = Deno.env.get('GEMINI_MODEL') ?? 'gemini-3.8-flash';
   const generationConfig: Record<string, unknown> = {
     temperature: 0.2,
     responseMimeType: 'application/json',
-    maxOutputTokens: 512,
+    maxOutputTokens: 2048,
   };
   if (/^gemini-2\.5-flash/.test(model)) {
     generationConfig.thinkingConfig = { thinkingBudget: 0 };
@@ -137,8 +133,7 @@ async function askVision(b64: string, mime: string): Promise<string> {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
       body: JSON.stringify({
-        systemInstruction: { parts: 
-[{ text: SYSTEM }] },
+        systemInstruction: { parts: [{ text: SYSTEM }] },
         contents: [{
           role: 'user',
           parts: [{ inline_data: { mime_type: mime, data: b64 } }, { text: PROMPT }],
@@ -150,8 +145,7 @@ async function askVision(b64: string, mime: string): Promise<string> {
   );
   const data = await res.json();
   if (data.promptFeedback?.blockReason) {
-    throw new HttpError(422, 'A IA não conseguiu analisar esta 
-imagem. Tente outra foto.');
+    throw new HttpError(422, 'A IA não conseguiu analisar esta imagem. Tente outra foto.');
   }
   return data.candidates?.[0]?.content?.parts
     ?.map((p: { text?: string }) => p.text ?? '').join('') ?? '';
@@ -176,8 +170,7 @@ async function useQuota(supabase: any, userId: string) {
   const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
   const { count, error } = await supabase
     .from('ai_usage')
-    .select('id', { count: 'exact', head: 
-true })
+    .select('id', { count: 'exact', head: true })
     .eq('kind', 'analyze')
     .gte('created_at', since);
   if (error) {
@@ -190,8 +183,7 @@ true })
       `Você usou as ${limit} análises de foto das últimas 24 horas. Preencha manualmente ou volte mais tarde.`,
     );
   }
-  await supabase.from('ai_usage
-').insert({ user_id: userId, kind: 'analyze' });
+  await supabase.from('ai_usage').insert({ user_id: userId, kind: 'analyze' });
 }
 
 Deno.serve(async (req) => {
@@ -209,8 +201,7 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const b64 = String(body.image_base64 ?? '').replace(/^data:[^,]+,/, '');
-    const mime = String(body.mime_type ?? 'image/
-jpeg');
+    const mime = String(body.mime_type ?? 'image/jpeg');
     if (!b64) throw new HttpError(400, 'Imagem ausente.');
     if (!MIMES.includes(mime)) throw new HttpError(400, 'Formato de imagem não suportado.');
     if (b64.length > 2_500_000) throw new HttpError(413, 'Imagem grande demais.');

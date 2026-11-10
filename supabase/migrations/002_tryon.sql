@@ -8,8 +8,7 @@ alter table public.profiles
   add column if not exists body_photo_path text;
 
 -- 2) Buckets privados
-insert into storage.buckets (id, 
-name, public)
+insert into storage.buckets (id, name, public)
 values ('body-photos', 'body-photos', false), ('tryon', 'tryon', false)
 on conflict (id) do update set public = false;
 
@@ -31,8 +30,7 @@ create policy "body photo: apagar proprias" on storage.objects for delete to aut
   using (bucket_id = 'body-photos' and (storage.foldername(name))[1] = auth.uid()::text);
 
 create policy "tryon: ler proprias" on storage.objects for select to authenticated
-  using (bucket_id = 'tryon' and (storage.foldername(name))[1] = 
-auth.uid()::text);
+  using (bucket_id = 'tryon' and (storage.foldername(name))[1] = auth.uid()::text);
 create policy "tryon: apagar proprias" on storage.objects for delete to authenticated
   using (bucket_id = 'tryon' and (storage.foldername(name))[1] = auth.uid()::text);
 
