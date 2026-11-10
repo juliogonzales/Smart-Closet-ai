@@ -47,15 +47,14 @@ const CATEGORIES = {
   accessory: 'Acessório',
 };
 const CAT_ORDER = ['outerwear', 'top', 'fullbody', 'bottom', 'shoes', 'accessory'];
-const LGPD_VERSION = '1.0';
+const LGPD_VERSION = '1.1';
 // Preencha com o e-mail de contato para dúvidas de privacidade (ex.: 'voce@exemplo.com').
 const CONTACT_EMAIL = '';
 const TERMS_HTML = `
   <p><b>Quem trata seus dados:</b> o responsável pelo Smart Closet AI.${CONTACT_EMAIL ? ` Contato: <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a>.` : ''}</p>
-  <p><b>O que guardamos:</b> sua conta, as fotos e dados das peças, os looks e, se você quiser, uma foto sua de corpo inteiro.</p>
-  <p><b>Foto de modelo:</b> você envia uma foto por vez e pode trocá-la ou apagá-la quando quiser. Ela fica em área privada, nunca aparece em links públicos e só é usada na função "vestir na pessoa".</p>
-  <p><b>Google Gemini:</b> ao vestir a pessoa, a sua foto de modelo e as fotos das peças escolhidas são enviadas ao Google Gemini para gerar a imagem.</p>
-  <p><b>Imagens geradas:</b> ficam em área privada, com link válido por 1 hora. São apagadas automaticamente após 7 dias, e você pode apagá-las antes.</p>
+  <p><b>O que guardamos:</b> sua conta, as fotos e dados das peças e os looks que você montar ou salvar.</p>
+  <p><b>Google Gemini:</b> ao usar a IA (preencher dados da peça, sugerir looks ou testar a IA), a foto da peça ou a lista de peças escolhidas é enviada ao Google Gemini. Nenhuma foto de pessoa é solicitada ou usada.</p>
+  <p><b>Prévia do look:</b> é montada no seu próprio aparelho, a partir dos recortes das suas peças. Não é enviada para a IA e não fica guardada no servidor.</p>
   <p><b>Seus direitos:</b> acessar, corrigir, excluir seus dados e retirar o consentimento a qualquer momento, em Perfil. Você pode excluir a conta inteira em Perfil > Excluir minha conta.</p>
   <p class="text-xs text-stone-500">Versão ${LGPD_VERSION}. O texto completo está em docs/TERMOS_LGPD.md no repositório.</p>`;
 const SEASONS = ['verão', 'outono', 'inverno', 'primavera'];
@@ -499,7 +498,7 @@ function renderRegister() {
       <div><label class="label" for="pw">Senha</label>${pwInput('pw', 'new-password', 8)}</div>
       <label class="flex items-start gap-3 rounded-2xl border border-stone-200 bg-white p-3 text-xs leading-relaxed text-stone-600">
         <input id="lgpd" type="checkbox" required class="mt-0.5 h-4 w-4 shrink-0 accent-stone-900">
-        <span>Li e concordo com os <button type="button" id="terms" class="font-medium text-stone-900 underline">Termos e Política de Privacidade</button>, inclusive o envio da minha foto de modelo ao Google Gemini para a função "vestir na pessoa" (obrigatório).</span>
+        <span>Li e concordo com os <button type="button" id="terms" class="font-medium text-stone-900 underline">Termos e Política de Privacidade</button>, inclusive o envio das fotos das peças ao Google Gemini para as sugestões da IA (obrigatório).</span>
       </label>
       <button class="btn btn-primary w-full" type="submit">Cadastrar</button>
       <p class="text-xs leading-relaxed text-stone-500">Suas fotos e dados ficam guardados no Supabase e só você os vê. Ao usar a IA, a foto da peça ou a lista de peças é enviada ao Google Gemini para gerar a sugestão.</p>
@@ -2060,7 +2059,7 @@ async function wipeData() {
 }
 
 /* ============================================================
-   Foto de modelo + "vestir na pessoa" (LGPD)
+   Limpeza de dados antigos (foto de modelo, legado)
    ============================================================ */
 function openTerms() {
   const root = openModal(`
