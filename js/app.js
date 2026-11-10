@@ -227,13 +227,13 @@ const newGen = () => ({
 const state = {
   session: null, user: null, profile: null,
   clothes: [], outfits: [], loaded: false, loadedAt: 0,
-  closetFilter: 'all', closetQuery: '', draft: null, gen: newGen(),
+  closetFilter: 'all', closetQuery: '', closetSort: 'category', draft: null, gen: newGen(),
 };
 
 function resetState() {
   Object.assign(state, {
     session: null, user: null, profile: null, clothes: [], outfits: [],
-    loaded: false, loadedAt: 0, closetFilter: 'all', closetQuery: '', draft: null, gen: newGen(),
+    loaded: false, loadedAt: 0, closetFilter: 'all', closetQuery: '', closetSort: 'category', draft: null, gen: newGen(),
   });
 }
 
@@ -282,7 +282,7 @@ function errMsg(e) {
     return 'Sem conexão com a internet. Verifique e tente de novo.';
   }
   if (code === 'PGRST205' || code === '42P01' || /relation .* does not exist|schema cache/i.test(m)) {
-    return 'O banco ainda não está pronto (tabelas ausentes). Rode o schema.sql no Supabase — veja Perfil > Verificar conexão.';
+    return 'O banco ainda não está pronto (tabelas ausentes). Rode o schema.sql no Supabase — veja Perfil > Testar a IA.';
   }
   if (code === '42501' || /row-level security|permission denied/i.test(m)) {
     return 'Sem permissão para esta ação. Saia e entre de novo; se persistir, confira o schema.sql.';
@@ -303,7 +303,7 @@ async function fnError(e) {
   } catch { /* ignora */ }
   const msg = e?.message || '';
   if (/Failed to send|fetch|NetworkError|Load failed/i.test(msg)) {
-    return 'Não consegui falar com a IA. Verifique a internet e se as Edge Functions foram publicadas (Perfil > Verificar conexão).';
+    return 'Não consegui falar com a IA. Verifique a internet e se as Edge Functions foram publicadas (Perfil > Testar a IA).';
   }
   if (/non-2xx/i.test(msg)) return 'A IA devolveu um erro. Tente de novo em instantes.';
   return msg || 'Algo deu errado com a IA.';
@@ -334,7 +334,7 @@ const go = (hash) => { if (location.hash === hash) route(); else location.hash =
 const TITLES = {
   home: 'Início', closet: 'Guarda-roupa', create: 'Criar look', profile: 'Perfil',
   login: 'Entrar', register: 'Criar conta', reset: 'Redefinir senha', outfit: 'Look',
-  share: 'Look compartilhado', diagnostico: 'Verificar conexão', onboarding: 'Bem-vinda(o)',
+  share: 'Look compartilhado', diagnostico: 'Testar a IA', onboarding: 'Bem-vinda(o)',
 };
 
 /* ============================================================
@@ -406,7 +406,7 @@ function renderFatal(e) {
       <p class="mt-3 text-sm text-stone-600">${esc(errMsg(e))}</p>
       <div class="mt-5 grid gap-2">
         <button class="btn btn-primary" id="retry">Tentar de novo</button>
-        <a href="#/diagnostico" class="btn btn-soft">Verificar conexão</a>
+        <a href="#/diagnostico" class="btn btn-soft">Testar a IA</a>
         <button class="btn btn-ghost" id="out">Sair da conta</button>
       </div>
     </div>`;
@@ -791,67 +791,140 @@ function filterClothes() {
   });
 }
 
-function closetGrid(list) {
-  if (!list.length) {
-    const filtered = state.closetFilter !== 'all' || state.closetQuery.trim();
-    return `
-      <div class="mt-10 text-center text-stone-500">
-        <p class="text-sm">${filtered ? 'Nenhuma peça encontrada com esse filtro.' : 'Seu guarda-roupa está vazio.'}</p>
-        ${filtered ? '<button id="clear-filters" class="btn btn-soft mt-4">Limpar filtros</button>'
-                   : `<a href="#/closet/new" class="btn btn-primary mt-4">${icon('camera')} Adicionar peça</a>`}
-      </div>`;
-  }
-  return `
-    <div class="mt-4 grid grid-cols-2 gap-3">
-      ${list.map((c) => `
-        <button data-id="${esc(c.id)}" class="card overflow-hidden text-left">
-          <div class="flex aspect-square items-center justify-center bg-stone-50 p-3">
-            <img src="${esc(c.image_url)}" alt="${esc(c.name || CATEGORIES[c.category])}" loading="lazy" class="max-h-full max-w-full object-contain">
-          </div>
-          <div class="p-3">
-            <p class="truncate text-sm font-medium">${esc(c.name || CATEGORIES[c.category])}</p>
-            <div class="mt-1.5 flex items-center gap-1">
-              ${(c.colors || []).slice(0, 4).map((k) => `<span class="h-3 w-3 rounded-full ring-1 ring-stone-200" title="${esc(k)}" style="background:${COLORS[k] || '#ccc'}"></span>`).join('')}
-              <span class="ml-auto text-[11px] text-stone-500">${CATEGORIES[c.category]}</span>
-            </div>
-          </div>
-        </button>`).join('')}
-    </div>`;
-}
 
 function renderCloset() {
   const f = state.closetFilter;
+  const total = state.clothes.length;
+  const counts = categoryCounts();
+  const cats = CAT_ORDER.filter((k) => counts[k]);
   view().innerHTML = `
     <div class="fade-up">
-      <div class="flex items-center justify-between">
-        <h1 class="font-display text-3xl">Guarda-roupa</h1>
-        <a href="#/closet/new" class="btn btn-primary !px-4">${icon('plus', 'h-4 w-4')} Peça</a>
+      <div class="flex items-end justify-between gap-3">
+        <div class="min-w-0">
+          <h1 class="font-display text-3xl">Guarda-roupa</h1>
+          <p class="mt-1 text-sm text-stone-500">${total
+            ? `${total} ${total === 1 ? 'peça' : 'peças'} em ${cats.length} ${cats.length === 1 ? 'categoria' : 'categorias'}`
+            : 'Cadastre suas peças para começar'}</p>
+        </div>
+        <a href="#/closet/new" class="btn btn-primary shrink-0 !px-4">${icon('plus', 'h-4 w-4')} Peça</a>
       </div>
-      <div class="relative mt-4">
-        <span class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-stone-400">${icon('search', 'h-4 w-4')}</span>
-        <input id="q" type="search" class="input !pl-10" placeholder="Buscar por nome, cor ou estilo" value="${esc(state.closetQuery)}" aria-label="Buscar peças">
-      </div>
-      <div class="-mx-4 mt-3 flex gap-2 overflow-x-auto px-4 pb-1">
-        ${[['all', 'Tudo'], ...Object.entries(CATEGORIES)].map(([k, v]) =>
-          `<button data-f="${k}" aria-pressed="${f === k}" class="chip shrink-0 ${f === k ? 'chip-on' : ''}">${v}</button>`).join('')}
-      </div>
+      ${total ? `
+        <div class="mt-5 flex gap-2">
+          <div class="relative min-w-0 flex-1">
+            <span class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-stone-400">${icon('search', 'h-4 w-4')}</span>
+            <input id="q" type="search" class="input !pl-10" placeholder="Buscar nome, cor ou estilo" value="${esc(state.closetQuery)}" aria-label="Buscar peças">
+          </div>
+          <select id="sort" class="input !w-auto shrink-0 !py-2 text-sm" aria-label="Ordenar peças">
+            <option value="category">Por categoria</option>
+            <option value="recent">Mais recentes</option>
+            <option value="name">Nome (A–Z)</option>
+          </select>
+        </div>
+        <div class="-mx-4 mt-3 flex gap-2 overflow-x-auto px-4 pb-1">
+          ${[['all', 'Tudo', total], ...cats.map((k) => [k, CATEGORIES[k], counts[k]])].map(([k, v, n]) =>
+            `<button data-f="${k}" aria-pressed="${f === k}" class="chip shrink-0 ${f === k ? 'chip-on' : ''}">${esc(v)} <span class="${f === k ? 'opacity-70' : 'text-stone-400'}">${n}</span></button>`).join('')}
+        </div>` : ''}
       <p id="count" class="mt-3 text-xs text-stone-500"></p>
       <div id="grid"></div>
     </div>`;
 
   const paintGrid = () => {
-    const list = filterClothes();
-    $('#count').textContent = state.clothes.length ? `${list.length} de ${state.clothes.length} peças` : '';
-    $('#grid').innerHTML = closetGrid(list);
+    const filtered = state.closetFilter !== 'all' || state.closetQuery.trim();
+    const list = sortClothes(filterClothes());
+    $('#count').textContent = total && filtered ? `${list.length} de ${total} peças` : '';
+    const grouped = total && !filtered && state.closetSort === 'category';
+    $('#grid').innerHTML = !total || !list.length
+      ? closetEmpty(total)
+      : grouped ? closetSections(list)
+      : `<div class="mt-4 grid grid-cols-2 gap-3">${list.map(clothCard).join('')}</div>`;
     $$('[data-id]', $('#grid')).forEach((b) => (b.onclick = () => openItemModal(b.dataset.id)));
     const clr = $('#clear-filters');
     if (clr) clr.onclick = () => { state.closetFilter = 'all'; state.closetQuery = ''; renderCloset(); };
   };
   paintGrid();
   $$('[data-f]').forEach((b) => (b.onclick = () => { state.closetFilter = b.dataset.f; renderCloset(); }));
-  let t;
-  $('#q').oninput = (e) => { state.closetQuery = e.target.value; clearTimeout(t); t = setTimeout(paintGrid, 120); };
+  const q = $('#q');
+  if (q) {
+    let t;
+    q.oninput = (e) => { state.closetQuery = e.target.value; clearTimeout(t); t = setTimeout(paintGrid, 120); };
+  }
+  const sort = $('#sort');
+  if (sort) {
+    sort.value = state.closetSort;
+    sort.onchange = (e) => { state.closetSort = e.target.value; paintGrid(); };
+  }
 }
+
+function categoryCounts() {
+  const c = {};
+  state.clothes.forEach((x) => { c[x.category] = (c[x.category] || 0) + 1; });
+  return c;
+}
+
+// Peça com recorte é PNG (fundo removido). Foto antiga em JPEG ainda tem fundo.
+const hasCutout = (c) => /\.png$/i.test(c.image_url || '');
+
+function sortClothes(list) {
+  const copy = [...list];
+  if (state.closetSort === 'name') {
+    copy.sort((a, b) => (a.name || CATEGORIES[a.category]).localeCompare(b.name || CATEGORIES[b.category], 'pt-BR'));
+  } else if (state.closetSort === 'category') {
+    copy.sort((a, b) => CAT_ORDER.indexOf(a.category) - CAT_ORDER.indexOf(b.category));
+  }
+  return copy; // "recent": ordem do banco (mais novas primeiro)
+}
+
+function clothCard(c) {
+  const title = c.name || CATEGORIES[c.category];
+  const dots = (c.colors || []).slice(0, 3).map((v) =>
+    `<span class="h-2.5 w-2.5 rounded-full ring-1 ring-stone-300" style="background:${COLORS[v] || '#d6d3d1'}"></span>`).join('');
+  return `
+    <button data-id="${esc(c.id)}" class="card overflow-hidden text-left transition active:scale-[0.98]">
+      <div class="relative flex aspect-square items-center justify-center bg-stone-100 p-4">
+        <img src="${esc(c.image_url)}" alt="${esc(title)}" loading="lazy" class="max-h-full max-w-full object-contain">
+        ${hasCutout(c) ? '' : '<span class="absolute bottom-2 left-2 rounded-full bg-white/90 px-2 py-0.5 text-[11px] font-medium text-stone-600">Sem recorte</span>'}
+      </div>
+      <div class="px-3 pb-3 pt-2.5">
+        <p class="truncate text-sm font-medium text-stone-800">${esc(title)}</p>
+        <div class="mt-1 flex items-center gap-1.5 text-xs text-stone-500">
+          <span class="truncate">${esc(CATEGORIES[c.category])}</span>
+          ${dots ? `<span class="ml-auto flex shrink-0 gap-1">${dots}</span>` : ''}
+        </div>
+      </div>
+    </button>`;
+}
+
+function closetSections(list) {
+  return CAT_ORDER.map((k) => [k, list.filter((c) => c.category === k)])
+    .filter(([, arr]) => arr.length)
+    .map(([k, arr]) => `
+      <section class="mt-7 first:mt-5">
+        <div class="mb-3 flex items-baseline justify-between">
+          <h2 class="font-display text-xl">${esc(CATEGORIES[k])}</h2>
+          <span class="text-xs text-stone-500">${arr.length}</span>
+        </div>
+        <div class="grid grid-cols-2 gap-3">${arr.map(clothCard).join('')}</div>
+      </section>`).join('');
+}
+
+function closetEmpty(total) {
+  if (total) return `
+    <div class="mt-12 text-center">
+      <p class="text-sm text-stone-500">Nenhuma peça encontrada com esse filtro.</p>
+      <button id="clear-filters" class="btn btn-soft mt-4">Limpar filtros</button>
+    </div>`;
+  return `
+    <div class="card mt-6 p-6">
+      <p class="font-display text-2xl">Comece pela primeira peça</p>
+      <ol class="mt-4 space-y-3 text-sm text-stone-600">
+        <li class="flex gap-3"><span class="chip !px-2.5 !py-0.5 shrink-0">1</span><span>Fotografe uma peça estendida sobre um fundo liso.</span></li>
+        <li class="flex gap-3"><span class="chip !px-2.5 !py-0.5 shrink-0">2</span><span>O app tira o fundo sozinho. Se sobrar algo, ajuste com o pincel.</span></li>
+        <li class="flex gap-3"><span class="chip !px-2.5 !py-0.5 shrink-0">3</span><span>Salve e monte seu primeiro look.</span></li>
+      </ol>
+      <a href="#/closet/new" class="btn btn-primary mt-6 w-full">${icon('camera')} Adicionar primeira peça</a>
+    </div>`;
+}
+
 
 /* --- formulário reutilizável (nova peça / edição) --- */
 function chipRow(values, selected, attr, render = (v) => esc(v)) {
@@ -1464,7 +1537,7 @@ function renderCreate() {
             <button id="fav" class="btn ${r.saved_id ? 'btn-primary' : 'btn-soft'}">${icon(r.saved_id ? 'check' : 'heart')} ${r.saved_id ? 'Nos favoritos' : 'Salvar nos Favoritos'}</button>
             <button id="share" class="btn btn-soft">${icon('share')} Compartilhar</button>
           </div>
-          <button id="tryon" class="btn btn-soft mt-2 w-full">${icon('sparkles')} Vestir na pessoa</button>
+          <button id="tryon" class="btn btn-soft mt-2 w-full">${icon('sparkles')} Prévia do look</button>
         </div>` : ''}
     </div>`;
 
@@ -1479,7 +1552,7 @@ function renderCreate() {
   if (r) {
     $('#fav').onclick = toggleFavorite;
     $('#share').onclick = shareGenerated;
-    $('#tryon').onclick = () => openTryOn(r.items);
+    $('#tryon').onclick = () => openLookPreview(r.items);
     bindSwap($('#result-card'), (itemId) => openSwap(r.items, itemId, applyGeneratedItems));
   }
 }
@@ -1624,11 +1697,11 @@ function renderOutfitDetail(id) {
         <button id="share" class="btn btn-primary" ${items.length ? '' : 'disabled'}>${icon('share')} Compartilhar</button>
         <button id="del" class="btn btn-danger">${icon('trash')} Excluir</button>
       </div>
-      <button id="tryon" class="btn btn-soft mt-2 w-full" ${items.length ? '' : 'disabled'}>${icon('sparkles')} Vestir na pessoa</button>
+      <button id="tryon" class="btn btn-soft mt-2 w-full" ${items.length ? '' : 'disabled'}>${icon('sparkles')} Prévia do look</button>
       ${o.is_public ? `<button id="unshare" class="btn btn-ghost mt-2 w-full text-sm">Desativar link público</button>` : ''}
     </div>`;
   $('#share').onclick = () => openShare(id);
-  $('#tryon').onclick = () => openTryOn(items);
+  $('#tryon').onclick = () => openLookPreview(items);
   $('#rename').onclick = async () => {
     const t = await promptDialog({ title: 'Renomear look', label: 'Nome do look', value: o.title });
     if (!t || t === o.title) return;
@@ -1861,25 +1934,10 @@ function renderProfile() {
           <div class="flex flex-wrap gap-2">${PROFILE_STYLES.map((s) => `<button data-s="${esc(s)}" aria-pressed="${sel.has(s)}" class="chip ${sel.has(s) ? 'chip-on' : ''}">${esc(s)}</button>`).join('')}</div></div>
         <button id="save" class="btn btn-primary mt-6 w-full">Salvar perfil</button>
 
-        <div class="mt-8 rounded-2xl border border-stone-200 p-4" id="body-section">
-          <h2 class="text-sm font-semibold">Foto de modelo</h2>
-          <p class="mt-1 text-xs leading-relaxed text-stone-500">Uma foto sua de corpo inteiro, em pé, com fundo simples. Usada só na função "vestir na pessoa". Você pode trocar ou apagar quando quiser.</p>
-          ${p.lgpd_consent_at ? `
-            <div id="body-preview" class="mt-3 flex aspect-[3/4] items-center justify-center overflow-hidden rounded-2xl bg-stone-100 text-xs text-stone-500">${p.body_photo_path ? 'Carregando foto…' : 'Nenhuma foto ainda'}</div>
-            <div class="mt-3 grid grid-cols-2 gap-2">
-              <button id="body-up" class="btn btn-soft">${icon('camera')} ${p.body_photo_path ? 'Trocar foto' : 'Enviar foto'}</button>
-              ${p.body_photo_path ? `<button id="body-del" class="btn btn-danger">Apagar foto</button>` : '<span></span>'}
-            </div>
-            <button id="body-revoke" class="mt-3 w-full text-xs font-medium text-stone-500 underline-offset-2 hover:underline">Retirar consentimento e apagar foto e imagens geradas</button>
-            <input id="body-file" type="file" accept="image/*" class="hidden">` : `
-            <p class="mt-3 rounded-2xl bg-stone-100 p-3 text-xs text-stone-600">Para usar "vestir na pessoa", aceite o uso da foto de modelo.</p>
-            <button id="body-accept" class="btn btn-primary mt-3 w-full">Ver termo e aceitar</button>`}
-        </div>
-
         <div class="mt-8 space-y-2">
           ${canInstall ? `<button id="install" class="btn btn-soft w-full">${icon('download')} Instalar o app</button>` : ''}
           ${iosHint ? `<p class="rounded-2xl bg-stone-100 p-3 text-xs text-stone-600">Para instalar no iPhone: toque em Compartilhar e depois em “Adicionar à Tela de Início”.</p>` : ''}
-          <a href="#/diagnostico" class="btn btn-soft w-full">Verificar conexão e configuração</a>
+          <a href="#/diagnostico" class="btn btn-soft w-full">Testar a IA</a>
           <button id="chpw" class="btn btn-soft w-full">Alterar senha</button>
           <button id="out" class="btn btn-ghost w-full">Sair da conta</button>
         </div>
@@ -1907,12 +1965,6 @@ function renderProfile() {
     $('#wipe').onclick = wipeData;
     $('#delacc').onclick = deleteAccount;
     $('#avatar').onclick = () => $('#avatar-file').click();
-    const bu = $('#body-up'); if (bu) bu.onclick = () => $('#body-file').click();
-    const bf = $('#body-file'); if (bf) bf.onchange = (e) => uploadBodyPhoto(e.target.files[0]);
-    const bd = $('#body-del'); if (bd) bd.onclick = () => removeBodyPhoto(false);
-    const br = $('#body-revoke'); if (br) br.onclick = () => removeBodyPhoto(true);
-    const ba = $('#body-accept'); if (ba) ba.onclick = () => openConsentModal();
-    if (p.body_photo_path) loadBodyPreview(p.body_photo_path);
     $('#avatar-file').onchange = async (e) => {
       const f = e.target.files[0]; if (!f) return;
       setBusy(true, 'Enviando foto…');
@@ -2018,252 +2070,121 @@ function openTerms() {
   $('#terms-ok', root).onclick = () => closeModal();
 }
 
-function openConsentModal() {
-  const root = openModal(`
-    ${modalHeader('Foto de modelo')}
-    <div class="space-y-3 text-sm leading-relaxed text-stone-600">${TERMS_HTML}</div>
-    <label class="mt-4 flex items-start gap-3 text-sm text-stone-700">
-      <input id="cons" type="checkbox" class="mt-0.5 h-4 w-4 accent-stone-900">
-      <span>Concordo com o uso da minha foto de modelo, conforme descrito acima.</span>
-    </label>
-    <button id="cons-go" class="btn btn-primary mt-4 w-full" disabled>Aceitar e continuar</button>`);
-  $('#cons', root).onchange = (e) => { $('#cons-go', root).disabled = !e.target.checked; };
-  $('#cons-go', root).onclick = async () => {
-    closeModal();
-    setBusy(true, 'Salvando consentimento…');
-    try {
-      await saveConsent(true);
-      toast('Consentimento salvo. Agora envie sua foto.', 'ok');
-    } catch (e) { toast(errMsg(e), 'error'); }
-    setBusy(false); renderProfile();
-  };
-}
+/* ============================================================
+   Prévia do look: monta as peças umas sobre as outras, centralizadas.
+   Usa só os recortes do guarda-roupa (fundo removido). Não usa foto de pessoa e não chama IA.
+   ============================================================ */
+const LOOK_WIDTH = { outerwear: 0.76, top: 0.62, fullbody: 0.72, bottom: 0.58, shoes: 0.46 };
+const LOOK_STACK = ['outerwear', 'top', 'fullbody', 'bottom', 'shoes'];
 
-async function saveConsent(accepted) {
-  const patch = accepted
-    ? { lgpd_consent_at: new Date().toISOString(), lgpd_consent_version: LGPD_VERSION }
-    : { lgpd_consent_at: null, lgpd_consent_version: null };
-  const { data, error } = await sb.from('profiles').update(patch).eq('id', state.user.id).select().single();
-  if (error) throw error;
-  Object.assign(state.profile, data);
-}
+// Tenta carregar com CORS (permite salvar a imagem); se o servidor não enviar o cabeçalho, carrega sem ele.
+const loadAny = (url) => loadImg(url, true).catch(() => loadImg(url, false));
 
-async function uploadBodyPhoto(file) {
-  if (!file) return;
-  setBusy(true, 'Enviando foto de modelo…');
-  try {
-    const blob = await resizeToBlob(file, 1024);
-    const path = `${state.user.id}/body-${Date.now()}.jpg`;
-    const up = await sb.storage.from('body-photos').upload(path, blob, { contentType: 'image/jpeg', upsert: false });
-    if (up.error) throw up.error;
-    const old = state.profile.body_photo_path;
-    const { data, error } = await sb.from('profiles').update({ body_photo_path: path }).eq('id', state.user.id).select().single();
-    if (error) { await sb.storage.from('body-photos').remove([path]); throw error; }
-    Object.assign(state.profile, data);
-    if (old) await sb.storage.from('body-photos').remove([old]);
-    toast('Foto de modelo salva!', 'ok');
-  } catch (e) { toast(errMsg(e), 'error'); }
-  setBusy(false); renderProfile();
-}
+async function composeOutfit(items) {
+  const loaded = await Promise.all(items.map(async (it) => {
+    try { return { it, img: await loadAny(it.image_url) }; } catch { return null; }
+  }));
+  const pieces = loaded.filter(Boolean);
+  if (!pieces.length) throw new Error('Não consegui carregar as fotos das peças. Verifique a internet e tente de novo.');
 
-async function removeBodyPhoto(revoke) {
-  const q = revoke
-    ? 'Retirar o consentimento e apagar sua foto de modelo e as imagens geradas?'
-    : 'Apagar sua foto de modelo?';
-  if (!window.confirm(q)) return;
-  setBusy(true, 'Apagando…');
-  try {
-    const uid = state.user.id;
-    const path = state.profile.body_photo_path;
-    if (path) await sb.storage.from('body-photos').remove([path]);
-    if (revoke) {
-      const { data: files } = await sb.storage.from('tryon').list(uid, { limit: 1000 });
-      if (files?.length) await sb.storage.from('tryon').remove(files.map((f) => `${uid}/${f.name}`));
-    }
-    const patch = { body_photo_path: null };
-    if (revoke) { patch.lgpd_consent_at = null; patch.lgpd_consent_version = null; }
-    const { data, error } = await sb.from('profiles').update(patch).eq('id', uid).select().single();
-    if (error) throw error;
-    Object.assign(state.profile, data);
-    toast(revoke ? 'Consentimento retirado e dados apagados.' : 'Foto apagada.', 'ok');
-  } catch (e) { toast(errMsg(e), 'error'); }
-  setBusy(false); renderProfile();
-}
-
-async function loadBodyPreview(path) {
-  const { data, error } = await sb.storage.from('body-photos').createSignedUrl(path, 600);
-  const box = $('#body-preview');
-  if (error || !data || !box) return;
-  box.innerHTML = `<img src="${esc(data.signedUrl)}" alt="Sua foto de modelo" class="h-full w-full object-contain">`;
-}
-
-// Monta a prévia "vestir na pessoa" no próprio navegador (modo gratuito).
-// Desenha a foto de modelo e encaixa cada peça (fundo já removido) dentro da caixa que a IA indicou.
-async function composeLook(data) {
-  const load = (src) => new Promise((res, rej) => {
-    const im = new Image(); im.crossOrigin = 'anonymous';
-    im.onload = () => res(im); im.onerror = () => rej(new Error('Não consegui carregar uma das imagens.'));
-    im.src = src;
-  });
-  const base = await load(data.body_url);
-  const k = Math.min(1, 1200 / Math.max(base.naturalWidth, base.naturalHeight));
-  const W = Math.round(base.naturalWidth * k), H = Math.round(base.naturalHeight * k);
+  const W = 1080, H = 1350;
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
   const g = cv.getContext('2d');
-  g.drawImage(base, 0, 0, W, H);
-  for (const L of data.layers || []) {
-    let im;
-    try { im = await load(L.url); } catch { continue; }
-    const [x, y, w, h] = L.box;
-    const bx = x * W, by = y * H, bw = w * W, bh = h * H;
-    const s = Math.min(bw / im.naturalWidth, bh / im.naturalHeight);
-    const dw = im.naturalWidth * s, dh = im.naturalHeight * s;
-    g.drawImage(im, bx + (bw - dw) / 2, by + (bh - dh) / 2, dw, dh);
+  const bg = g.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, '#fbfaf8'); bg.addColorStop(1, '#ebe8e3');
+  g.fillStyle = bg; g.fillRect(0, 0, W, H);
+
+  const main = pieces
+    .filter((p) => LOOK_WIDTH[p.it.category])
+    .sort((a, b) => LOOK_STACK.indexOf(a.it.category) - LOOK_STACK.indexOf(b.it.category))
+    .map((p) => {
+      const w = W * LOOK_WIDTH[p.it.category];
+      return { ...p, w, h: w * p.img.naturalHeight / p.img.naturalWidth };
+    });
+  const acc = pieces.filter((p) => !LOOK_WIDTH[p.it.category]);
+
+  const shadow = (on, blur = 36, dy = 14) => {
+    g.shadowColor = on ? 'rgba(28,25,23,0.22)' : 'transparent';
+    g.shadowBlur = on ? blur : 0; g.shadowOffsetY = on ? dy : 0;
+  };
+
+  if (main.length) {
+    const GAP = H * 0.015;
+    const total = main.reduce((s, p) => s + p.h, 0) + GAP * (main.length - 1);
+    const k = Math.min(1, (H * 0.84) / total);
+    let y = (H - total * k) / 2;
+    g.save();
+    for (const p of main) {
+      const w = p.w * k, h = p.h * k;
+      shadow(true);
+      g.drawImage(p.img, (W - w) / 2, y, w, h);
+      y += h + GAP * k;
+    }
+    g.restore();
   }
-  return await canvasToBlob(cv, 'image/jpeg', 0.9);
+
+  // Acessórios: pequena coluna no canto direito, de baixo para cima.
+  // Se só houver acessórios, eles ficam lado a lado no centro.
+  if (acc.length) {
+    g.save();
+    if (main.length) {
+      let y = H * 0.9;
+      for (const p of acc) {
+        const w = W * 0.2, h = w * p.img.naturalHeight / p.img.naturalWidth;
+        y -= h;
+        shadow(true, 22, 8);
+        g.drawImage(p.img, W * 0.84 - w / 2, y, w, h);
+        y -= H * 0.02;
+      }
+    } else {
+      const w = W * 0.3, gap = W * 0.04;
+      const total = acc.length * w + (acc.length - 1) * gap;
+      acc.forEach((p, i) => {
+        const h = w * p.img.naturalHeight / p.img.naturalWidth;
+        shadow(true, 22, 8);
+        g.drawImage(p.img, (W - total) / 2 + i * (w + gap), (H - h) / 2, w, h);
+      });
+    }
+    g.restore();
+  }
+  return cv;
 }
 
-async function openTryOn(items) {
-  if (!state.profile?.lgpd_consent_at) {
-    toast('Aceite o uso da foto de modelo no Perfil para continuar.', 'error');
-    return go('#/profile');
-  }
-  if (!state.profile?.body_photo_path) {
-    toast('Envie sua foto de corpo inteiro no Perfil primeiro.', 'error');
-    return go('#/profile');
-  }
+async function openLookPreview(items) {
+  if (!items?.length) return toast('Escolha pelo menos uma peça.', 'error');
   const root = openModal(`
-    ${modalHeader('Vestir na pessoa')}
-    <p class="text-sm text-stone-600">Monta uma prévia sua vestindo estas peças. Pode levar até um minuto.</p>
-    <div class="mt-4 flex flex-wrap gap-2">${items.map((i) => `<div class="h-16 w-16 rounded-xl bg-stone-50 p-1"><img src="${esc(i.image_url)}" alt="" class="h-full w-full object-contain"></div>`).join('')}</div>
-    <button id="tryon-go" class="btn btn-primary mt-5 w-full">${icon('sparkles')} Montar prévia</button>
-    <div id="tryon-out" class="mt-5"></div>`);
-  $('#tryon-go', root).onclick = async () => {
-    const btn = $('#tryon-go', root);
-    btn.disabled = true; btn.textContent = 'Montando…';
+    ${modalHeader('Prévia do look')}
+    <p class="text-sm text-stone-600">As peças do look montadas uma sobre a outra, em fundo claro, com os recortes do seu guarda-roupa.</p>
+    <div id="look-box" class="mt-4 flex aspect-[4/5] items-center justify-center overflow-hidden rounded-3xl bg-stone-100"><div class="skeleton h-full w-full"></div></div>
+    <div class="mt-4 grid grid-cols-2 gap-2">
+      <button id="look-again" class="btn btn-ghost">Montar de novo</button>
+      <a id="look-save" class="btn btn-primary hidden">Salvar imagem</a>
+    </div>`);
+  const draw = async () => {
+    const box = $('#look-box', root), save = $('#look-save', root);
+    box.innerHTML = '<div class="skeleton h-full w-full"></div>';
+    save.classList.add('hidden');
     try {
-      const { data, error } = await withTimeout(
-        sb.functions.invoke('tryon', { body: { item_ids: items.map((i) => i.id) } }),
-        90000, 'A geração demorou demais. Tente de novo.');
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      if (data.mode === 'compose') {
-        const blob = await composeLook(data);
-        const local = URL.createObjectURL(blob);
-        $('#tryon-out', root).innerHTML = `
-          <img src="${local}" alt="Você vestindo o look" class="w-full rounded-3xl">
-          <p class="mt-2 text-xs text-stone-500">${data.approximate ? 'Não consegui localizar todas as peças com precisão, então usei posições padrão. ' : ''}Prévia montada no modo gratuito: o encaixe é aproximado. Nada foi guardado no servidor.</p>
-          <a href="${local}" download="look-smart-closet.jpg" class="btn btn-soft mt-3 w-full">Salvar imagem</a>`;
-        btn.remove();
-        return;
-      }
-      $('#tryon-out', root).innerHTML = `
-        <img src="${esc(data.url)}" alt="Você vestindo o look" class="w-full rounded-3xl">
-        <p class="mt-2 text-xs text-stone-500">O link vale por 1 hora. A imagem fica guardada só para você.</p>
-        <a href="${esc(data.url)}" target="_blank" rel="noopener" class="btn btn-soft mt-3 w-full">Abrir ou salvar imagem</a>`;
-      btn.remove();
+      const cv = await composeOutfit(items);
+      cv.className = 'h-full w-full object-contain';
+      box.innerHTML = ''; box.appendChild(cv);
+      canvasToBlob(cv, 'image/jpeg', 0.92).then((blob) => {
+        if (!blob || !save.isConnected) return;
+        save.href = URL.createObjectURL(blob);
+        save.download = 'look-smart-closet.jpg';
+        save.classList.remove('hidden');
+      }).catch(() => {});
     } catch (e) {
-      toast(await fnError(e), 'error');
-      // Mantém o botão travado por 20 segundos, com contagem regressiva.
-      let left = 20;
-      btn.disabled = true;
-      const tick = () => {
-        if (!btn.isConnected) return;
-        if (left <= 0) { btn.disabled = false; btn.innerHTML = `${icon('sparkles')} Tentar de novo`; return; }
-        btn.textContent = `Aguarde ${left}s…`;
-        left -= 1;
-        setTimeout(tick, 1000);
-      };
-      tick();
+      box.innerHTML = `<p class="p-6 text-center text-sm text-stone-600">${esc(errMsg(e))}</p>`;
     }
   };
+  $('#look-again', root).onclick = draw;
+  draw();
 }
 
 /* ============================================================
-   Diagnóstico (para quem configura tudo pelo celular)
+   Testar a IA (única verificação na tela de diagnóstico)
    ============================================================ */
-function keyInfo(key) {
-  if (!key) return { kind: 'vazia', ok: false };
-  if (key.startsWith('sb_publishable_')) return { kind: 'publishable', ok: true };
-  if (key.startsWith('sb_secret_')) return { kind: 'secret', ok: false, danger: true };
-  if (key.split('.').length === 3) {
-    try {
-      const b64 = key.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
-      const payload = JSON.parse(atob(b64 + '='.repeat((4 - (b64.length % 4)) % 4)));
-      return { kind: `legada (${payload.role})`, ok: payload.role === 'anon', danger: payload.role === 'service_role', ref: payload.ref };
-    } catch { /* cai no desconhecido */ }
-  }
-  return { kind: 'desconhecida', ok: false };
-}
-
-async function runDiagnostics() {
-  const out = [];
-  const add = (level, title, detail = '') => out.push({ level, title, detail });
-  const url = CONFIG.SUPABASE_URL || '';
-  const key = CONFIG.SUPABASE_ANON_KEY || '';
-
-  // 1) Configuração
-  if (!configured) {
-    add('bad', 'js/config.js não preenchido', 'Coloque a URL do projeto e a chave publishable (ou anon) em js/config.js.');
-    return out;
-  }
-  const host = (() => { try { return new URL(url).host; } catch { return ''; } })();
-  if (!/^[a-z0-9]+\.supabase\.co$/.test(host)) add('warn', 'URL do projeto com formato incomum', `URL atual: ${url}. O normal é https://SEU-REF.supabase.co (sem /rest/v1).`);
-  else add('ok', 'URL do projeto', host);
-  const ki = keyInfo(key);
-  if (ki.danger) add('bad', 'CHAVE SECRETA NO SITE!', 'Você colocou uma chave secreta/service_role em js/config.js. Troque AGORA pela publishable/anon e gere uma nova chave secreta no Supabase, pois esta ficou pública.');
-  else if (!ki.ok) add('bad', 'Chave inválida', `Tipo detectado: ${ki.kind}. Use a Publishable key (sb_publishable_…) ou a anon (eyJ…).`);
-  else add('ok', 'Chave pública', `Tipo: ${ki.kind}`);
-  if (ki.ref && host && !host.startsWith(ki.ref + '.')) add('bad', 'Chave de outro projeto', 'A chave anon pertence a um projeto diferente da URL configurada.');
-
-  // 2) Sessão
-  add(state.session ? 'ok' : 'warn', state.session ? 'Sessão ativa' : 'Você não está logado', state.session ? state.user.email : 'Entre na conta para testar tabelas e armazenamento.');
-
-  // 3) Tabelas
-  const tableCheck = async (t, required = true) => {
-    const { error } = await sb.from(t).select('id', { count: 'exact', head: true });
-    if (!error) return add('ok', `Tabela ${t}`, 'acessível');
-    if (error.code === 'PGRST205' || error.code === '42P01') return add(required ? 'bad' : 'warn', `Tabela ${t} não existe`, required ? 'Rode o supabase/schema.sql no SQL Editor.' : 'Rode o schema.sql atualizado para ativar o limite diário da IA.');
-    if (/JWT|not authenticated|401/i.test(error.message) && !state.session) return add('warn', `Tabela ${t}`, 'precisa de login para testar');
-    return add('bad', `Tabela ${t}`, errMsg(error));
-  };
-  if (state.session) {
-    await tableCheck('profiles'); await tableCheck('clothes'); await tableCheck('outfits'); await tableCheck('ai_usage', false);
-
-    // 4) Storage
-    for (const b of ['clothes', 'avatars']) {
-      const { error } = await sb.storage.from(b).list(state.user.id, { limit: 1 });
-      add(error ? 'bad' : 'ok', `Bucket ${b}`, error ? (/not found/i.test(error.message) ? 'não existe — rode o schema.sql' : error.message) : 'acessível');
-    }
-  }
-
-  // 5) Função de look público
-  const rpc = await sb.rpc('get_public_outfit', { p_outfit_id: '00000000-0000-0000-0000-000000000000' });
-  if (!rpc.error) add('ok', 'Links públicos de look', 'função disponível');
-  else if (rpc.error.code === 'PGRST202' || /Could not find the function/i.test(rpc.error.message)) add('bad', 'Links públicos de look', 'função get_public_outfit ausente — rode o schema.sql');
-  else add('warn', 'Links públicos de look', rpc.error.message);
-
-  // 6) Privacidade: anônimo não deve listar looks
-  try {
-    // Sem login, o banco responde 200 com lista vazia quando a privacidade está correta.
-    // Por isso olhamos o conteúdo da resposta, e não só o código HTTP.
-    const r = await fetch(`${url}/rest/v1/outfits?select=id&limit=1`, { headers: { apikey: key } });
-    const rows = r.ok ? await r.json().catch(() => []) : [];
-    if (r.ok && Array.isArray(rows) && rows.length > 0) add('warn', 'Privacidade dos looks', 'Visitantes sem login conseguem listar looks públicos. Rode o schema.sql atualizado para corrigir.');
-    else add('ok', 'Privacidade dos looks', 'visitantes não listam looks');
-  } catch { add('warn', 'Privacidade dos looks', 'não consegui testar'); }
-
-  // 7) Edge Functions publicadas?
-  for (const fn of ['stylist', 'analyze-clothing']) {
-    try {
-      const r = await withTimeout(fetch(`${url}/functions/v1/${fn}`, { method: 'OPTIONS' }), 12000, 'timeout');
-      if (r.status === 404) add(fn === 'stylist' ? 'bad' : 'warn', `Função ${fn}`, fn === 'stylist' ? 'não publicada — sem ela não há geração de looks.' : 'não publicada — o botão “Preencher com IA” não vai funcionar.');
-      else add('ok', `Função ${fn}`, 'publicada');
-    } catch { add('warn', `Função ${fn}`, 'não consegui verificar (rede ou CORS)'); }
-  }
-  return out;
-}
-
 async function testAI() {
   if (!state.session) return toast('Entre na conta para testar a IA.', 'error');
   setBusy(true, 'Testando a IA…');
@@ -2291,31 +2212,19 @@ async function renderDiagnostics() {
     <div class="fade-up">
       <div class="flex items-center gap-2">
         <a href="${state.session ? '#/profile' : '#/login'}" class="btn btn-ghost !p-2" aria-label="Voltar">${icon('x')}</a>
-        <h1 class="font-display text-3xl">Verificar conexão</h1>
+        <h1 class="font-display text-3xl">Testar a IA</h1>
       </div>
-      <p class="mt-2 text-sm text-stone-500">Testa se o Supabase, o banco, o armazenamento e a IA estão configurados.</p>
-      <div id="diag" class="mt-5 space-y-2"><div class="skeleton h-16 rounded-2xl"></div><div class="skeleton h-16 rounded-2xl"></div><div class="skeleton h-16 rounded-2xl"></div></div>
+      <p class="mt-2 text-sm text-stone-500">Envia uma foto de teste para a IA e confere se ela responde. Cada teste usa 1 análise do seu limite diário.</p>
+      <div class="card mt-6 p-5">
+        ${state.session
+          ? `<p class="text-sm text-stone-600">Quando quiser, toque no botão abaixo.</p>
+             <button id="d-ai" class="btn btn-primary mt-4 w-full">${icon('sparkles')} Testar a IA agora</button>`
+          : `<p class="text-sm text-stone-600">Entre na sua conta para testar a IA.</p>
+             <a href="#/login" class="btn btn-primary mt-4 w-full">Entrar</a>`}
+      </div>
     </div>`;
-  const results = await runDiagnostics();
-  const box = $('#diag');
-  if (!box) return;
-  const tone = { ok: ['✓', 'bg-emerald-50 text-emerald-800'], warn: ['!', 'bg-amber-50 text-amber-800'], bad: ['✕', 'bg-red-50 text-red-800'] };
-  box.innerHTML = results.map((r) => `
-    <div class="flex gap-3 rounded-2xl p-3 ${tone[r.level][1]}">
-      <span class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/70 text-xs font-bold" aria-hidden="true">${tone[r.level][0]}</span>
-      <div class="min-w-0 text-sm"><p class="font-medium">${esc(r.title)}</p>${r.detail ? `<p class="mt-0.5 text-xs opacity-90">${esc(r.detail)}</p>` : ''}</div>
-    </div>`).join('') + `
-    <div class="grid gap-2 pt-3">
-      <button id="d-again" class="btn btn-soft">${icon('refresh')} Testar de novo</button>
-      ${state.session ? `<button id="d-ai" class="btn btn-soft">${icon('sparkles')} Testar a IA agora (usa 1 análise)</button>` : ''}
-      <button id="d-copy" class="btn btn-ghost">Copiar relatório</button>
-    </div>`;
-  $('#d-again').onclick = renderDiagnostics;
-  const ai = $('#d-ai'); if (ai) ai.onclick = testAI;
-  $('#d-copy').onclick = async () => {
-    const text = results.map((r) => `[${r.level}] ${r.title}${r.detail ? ' — ' + r.detail : ''}`).join('\n');
-    try { await navigator.clipboard.writeText(text); toast('Relatório copiado.', 'ok'); } catch { toast('Não consegui copiar.', 'error'); }
-  };
+  const ai = $('#d-ai');
+  if (ai) ai.onclick = testAI;
 }
 
 /* ============================================================
