@@ -47,6 +47,12 @@
   </style>
   <style>
     html, body { background: #fafaf9; }
+    /* Tamanho dos ícones sem depender do Tailwind: evita ícones gigantes se o CSS demorar ou falhar. */
+    svg { flex-shrink: 0; width: 1.25rem; height: 1.25rem; }
+    svg.h-3 { width: .75rem; height: .75rem; }
+    svg.h-4 { width: 1rem; height: 1rem; }
+    svg.h-7 { width: 1.75rem; height: 1.75rem; }
+    svg.h-8 { width: 2rem; height: 2rem; }
     body { -webkit-tap-highlight-color: transparent; }
     .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
     :focus-visible { outline: 2px solid #1c1917; outline-offset: 2px; }
@@ -158,6 +164,14 @@
       setTimeout(function () {
         fail('A conexão está lenta ou alguma biblioteca não carregou. Verifique a internet e tente de novo.');
       }, 12000);
+      // Se os estilos (Tailwind) não carregarem, avisa em vez de mostrar a tela sem formatação.
+      setTimeout(function () {
+        if (window.tailwind) return;
+        var note = document.createElement('div');
+        note.className = 'mx-4 mt-3 rounded-2xl bg-amber-50 p-3 text-xs text-amber-900';
+        note.textContent = 'Os estilos do app não carregaram. Verifique a internet, desative bloqueadores de conteúdo do Safari e recarregue a página.';
+        document.body.insertBefore(note, document.body.firstChild);
+      }, 6000);
     })();
   </script>
 </body>
