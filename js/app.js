@@ -893,13 +893,42 @@ function openItemModal(id) {
   const root = openModal(`
     ${modalHeader('Peça')}
     <div class="mb-5 flex aspect-[4/3] items-center justify-center rounded-3xl bg-stone-50 p-4"><img src="${esc(item.image_url)}" alt="" class="max-h-full max-w-full object-contain"></div>
-    <button id="withit" class="btn btn-soft mb-5 w-full">${icon('sparkles')} Criar look com esta peça</button>
+    <div class="mb-5 grid grid-cols-2 gap-2"><button id="recut" class="btn btn-soft">${icon('scissors')} Recortar fundo</button><button id="withit" class="btn btn-soft">${icon('sparkles')} Criar look</button></div>
     <div id="form"></div>
     <div class="mt-6 flex gap-3">
       <button id="del" class="btn btn-danger">${icon('trash')} Excluir</button>
       <button id="save" class="btn btn-primary flex-1">Salvar alterações</button>
     </div>`);
   mountItemForm($('#form', root), d);
+  $('#recut', root).onclick = async () => {
+    setBusy(true, 'Carregando a peça…');
+    let src;
+    try {
+      const r = await fetch(item.image_url);
+      if (!r.ok) throw new Error('Não consegui baixar a foto da peça.');
+      src = await r.blob();
+    } catch (e) { setBusy(false); return toast(errMsg(e), 'error'); }
+    if (!/png/.test(src.type)) {
+      setBusy(true, 'Recortando a peça… (na 1ª vez pode demorar)');
+      try { src = (await removeBackground(src)).blob; }
+      catch (e) { toast(errMsg(e) + ' Ajuste manualmente com o pincel.', 'error'); }
+    }
+    setBusy(false);
+    const edited = await openCutoutEditor(src);
+    if (!edited) return;
+    setBusy(true, 'Salvando o recorte…');
+    try {
+      const path = `${state.user.id}/${crypto.randomUUID()}.png`;
+      const up = await sb.storage.from('clothes').upload(path, edited, { contentType: 'image/png', cacheControl: '31536000', upsert: false });
+      if (up.error) throw up.error;
+      const { data: pub } = sb.storage.from('clothes').getPublicUrl(path);
+      const { data, error } = await sb.from('clothes').update({ image_url: pub.publicUrl, storage_path: path }).eq('id', id).select().single();
+      if (error) { await sb.storage.from('clothes').remove([path]); throw error; }
+      if (item.storage_path) await sb.storage.from('clothes').remove([item.storage_path]);
+      Object.assign(item, data);
+      setBusy(false); closeModal(); renderCloset(); toast('Recorte salvo', 'ok');
+    } catch (e) { setBusy(false); toast(errMsg(e), 'error'); }
+  };
   $('#withit', root).onclick = () => {
     state.gen.pin = id; state.gen.result = null;
     closeModal(); go('#/create');
@@ -1095,11 +1124,130 @@ async function blobToBase64Jpeg(blob, max = 768) {
    Nova peça
    ============================================================ */
 function newDraft() {
-  return { original: null, blob: null, previewUrl: null, name: '', category: null, colors: new Set(), tags: new Set(), bgRemoved: false };
+  return { original: null, blob: null, previewUrl: null, name: '', category: null, colors: new Set(), tags: new Set(), bgRemoved: false, cutout: null, cutoutError: null };
 }
 function discardDraft() {
   if (state.draft?.previewUrl) URL.revokeObjectURL(state.draft.previewUrl);
   state.draft = null;
+}
+
+// Recorte da peça: roda sozinho ao escolher a foto. Se falhar, a foto original continua disponível.
+async function cutoutDraft(d) {
+  setBusy(true, 'Recortando a peça… (na 1ª vez pode demorar)');
+  try {
+    const { blob } = await removeBackground(d.original);
+    d.cutout = blob; d.cutoutError = null;
+    setPreview(d, blob); d.bgRemoved = true;
+  } catch (e) {
+    d.cutout = null; d.cutoutError = errMsg(e); d.bgRemoved = false;
+    setPreview(d, d.original);
+  }
+  setBusy(false);
+}
+
+// Pincel para ajustar o recorte: "Apagar" tira o que sobrou do fundo, "Restaurar" devolve partes da peça.
+// Resolve com um Blob PNG (já cortado nas bordas transparentes) ou null se cancelar.
+async function openCutoutEditor(srcBlob) {
+  const url = URL.createObjectURL(srcBlob);
+  let img;
+  try { img = await loadImg(url, false); }
+  catch { toast('Não consegui abrir esta foto.', 'error'); return null; }
+  finally { URL.revokeObjectURL(url); }
+  const k = Math.min(1, 1000 / Math.max(img.naturalWidth, img.naturalHeight));
+  const W = Math.round(img.naturalWidth * k), H = Math.round(img.naturalHeight * k);
+  const base = document.createElement('canvas'); base.width = W; base.height = H;
+  base.getContext('2d').drawImage(img, 0, 0, W, H);
+
+  return await new Promise((resolve) => {
+    const root = openModal(`
+      ${modalHeader('Ajustar recorte')}
+      <p class="text-sm text-stone-600">Arraste o dedo sobre a peça. <b>Apagar</b> tira o que sobrou do fundo; <b>Restaurar</b> devolve partes da peça.</p>
+      <div class="checker mt-4 flex justify-center rounded-3xl p-2">
+        <canvas id="ce" class="block max-h-[55vh] max-w-full touch-none"></canvas>
+      </div>
+      <div class="mt-4 grid grid-cols-3 gap-2">
+        <button id="ce-erase" class="btn btn-primary !py-2">Apagar</button>
+        <button id="ce-restore" class="btn btn-soft !py-2">Restaurar</button>
+        <button id="ce-undo" class="btn btn-ghost !py-2">Desfazer</button>
+      </div>
+      <label class="mt-4 block text-sm text-stone-600">Tamanho do pincel
+        <input id="ce-size" type="range" min="6" max="90" value="28" class="mt-1 w-full"></label>
+      <div class="mt-5 grid grid-cols-2 gap-2">
+        <button id="ce-cancel" class="btn btn-ghost">Cancelar</button>
+        <button id="ce-ok" class="btn btn-primary">Usar este recorte</button>
+      </div>`);
+
+    const cv = $('#ce', root);
+    cv.width = W; cv.height = H;
+    const g = cv.getContext('2d', { willReadFrequently: true });
+    g.drawImage(base, 0, 0);
+    const history = [];
+    let mode = 'erase', drawing = false, last = null;
+
+    const setMode = (m) => {
+      mode = m;
+      $('#ce-erase', root).className = `btn ${m === 'erase' ? 'btn-primary' : 'btn-soft'} !py-2`;
+      $('#ce-restore', root).className = `btn ${m === 'restore' ? 'btn-primary' : 'btn-soft'} !py-2`;
+    };
+    const radius = () => (Number($('#ce-size', root).value) / 2) * (W / cv.getBoundingClientRect().width);
+    const pt = (e) => {
+      const r = cv.getBoundingClientRect();
+      return [(e.clientX - r.left) * (W / r.width), (e.clientY - r.top) * (H / r.height)];
+    };
+    const dab = (x, y, r) => {
+      g.save();
+      if (mode === 'erase') {
+        g.globalCompositeOperation = 'destination-out';
+        g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+      } else {
+        g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.clip();
+        g.drawImage(base, 0, 0, W, H);
+      }
+      g.restore();
+    };
+    const line = (a, b, r) => {
+      const dist = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      const steps = Math.max(1, Math.ceil(dist / Math.max(1, r * 0.4)));
+      for (let i = 0; i <= steps; i++) {
+        const t = i / steps;
+        dab(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, r);
+      }
+    };
+
+    cv.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      history.push(g.getImageData(0, 0, W, H));
+      if (history.length > 12) history.shift();
+      cv.setPointerCapture(e.pointerId);
+      drawing = true; last = pt(e);
+      dab(last[0], last[1], radius());
+    });
+    cv.addEventListener('pointermove', (e) => {
+      if (!drawing) return;
+      e.preventDefault();
+      const p = pt(e);
+      line(last, p, radius());
+      last = p;
+    });
+    const end = () => { drawing = false; last = null; };
+    cv.addEventListener('pointerup', end);
+    cv.addEventListener('pointercancel', end);
+
+    setMode('erase');
+    $('#ce-erase', root).onclick = () => setMode('erase');
+    $('#ce-restore', root).onclick = () => setMode('restore');
+    $('#ce-undo', root).onclick = () => {
+      const prev = history.pop();
+      if (prev) g.putImageData(prev, 0, 0); else toast('Nada para desfazer.');
+    };
+    $('#ce-cancel', root).onclick = () => { closeModal(); resolve(null); };
+    $('#ce-ok', root).onclick = async () => {
+      const out = await canvasToBlob(cv, 'image/png');
+      const cropped = await autocrop(out);
+      if (cropped.opaque < 0.02) return toast('A peça ficou vazia. Use "Restaurar" para devolver partes dela.', 'error');
+      closeModal(); resolve(cropped.blob);
+    };
+  });
 }
 
 function renderNewItem() {
@@ -1113,17 +1261,20 @@ function renderNewItem() {
       </div>
 
       ${d.blob ? `
-        <div class="mt-5 flex aspect-square items-center justify-center rounded-3xl p-4 ${d.bgRemoved ? 'checker' : 'bg-stone-100'}">
+        <div class="mt-5 flex aspect-square items-center justify-center rounded-3xl p-4 ${d.bgRemoved && d.blob !== d.original ? 'checker' : 'bg-stone-100'}">
           <img src="${d.previewUrl}" alt="Prévia da peça" class="max-h-full max-w-full object-contain">
         </div>
         <div class="mt-3 grid grid-cols-2 gap-2">
-          <button id="rmbg" class="btn btn-soft" ${d.bgRemoved ? 'disabled' : ''}>${icon('scissors')} ${d.bgRemoved ? 'Fundo removido' : 'Remover fundo'}</button>
-          <button id="ai" class="btn btn-soft">${icon('sparkles')} Preencher com IA</button>
-          ${d.bgRemoved ? `<button id="restore" class="btn btn-ghost col-span-2">Restaurar foto original</button>` : ''}
+          <button id="rmbg" class="btn btn-soft">${icon('scissors')} Recortar de novo</button>
+          <button id="adjust" class="btn btn-soft">${icon('scissors')} Ajustar recorte</button>
+          <button id="ai" class="btn btn-soft col-span-2">${icon('sparkles')} Preencher com IA</button>
+          ${d.cutout && d.blob !== d.cutout ? `<button id="use-cut" class="btn btn-ghost col-span-2">Usar o recorte</button>` : ''}
+          ${d.original && d.blob !== d.original ? `<button id="restore" class="btn btn-ghost col-span-2">Usar foto original</button>` : ''}
           <button id="other" class="btn btn-ghost col-span-2">Trocar foto</button>
         </div>
+        ${d.cutoutError ? `<p class="mt-2 rounded-2xl bg-amber-50 p-3 text-sm text-amber-900">${esc(d.cutoutError)}</p>` : ''}
         <p class="mt-1 text-center text-xs text-stone-500">“Preencher com IA” envia a foto ao Google Gemini para sugerir categoria e cores.</p>` : `
-        <p class="mt-3 text-sm text-stone-500">Dica: fotografe a peça sobre uma superfície lisa, com boa luz.</p>
+        <p class="mt-3 text-sm text-stone-500">Dica: estique a peça sobre um chão ou parede lisos, com boa luz. Em cama com estampa, o recorte pode pedir ajuste com o pincel.</p>
         <div class="mt-5 grid grid-cols-2 gap-3">
           <button id="cam" class="card flex flex-col items-center gap-2 py-10 text-stone-700">${icon('camera', 'h-8 w-8')}<span class="text-sm font-medium">Tirar foto</span></button>
           <button id="gal" class="card flex flex-col items-center gap-2 py-10 text-stone-700">${icon('photo', 'h-8 w-8')}<span class="text-sm font-medium">Galeria</span></button>
@@ -1149,15 +1300,16 @@ function renderNewItem() {
   $('#other').onclick = () => $('#file-gal').click();
   mountItemForm($('#form'), d);
 
-  $('#rmbg').onclick = async () => {
-    setBusy(true, 'Removendo o fundo… (na 1ª vez pode demorar)');
-    try {
-      const { blob, method } = await removeBackground(d.original);
-      setPreview(d, blob); d.bgRemoved = true;
-      toast(method === 'ia' ? 'Fundo removido!' : 'Fundo removido (modo simples — funciona melhor com fundo liso)', 'ok');
-    } catch (e) { toast(errMsg(e), 'error'); }
-    setBusy(false); renderNewItem();
+  $('#rmbg').onclick = async () => { await cutoutDraft(d); renderNewItem(); };
+  $('#adjust').onclick = async () => {
+    const edited = await openCutoutEditor(d.blob);
+    if (!edited) return;
+    d.cutout = edited; d.cutoutError = null; d.bgRemoved = true;
+    setPreview(d, edited);
+    renderNewItem();
   };
+  const useCut = $('#use-cut');
+  if (useCut) useCut.onclick = () => { setPreview(d, d.cutout); d.bgRemoved = true; renderNewItem(); };
   const restore = $('#restore');
   if (restore) restore.onclick = () => { setPreview(d, d.original); d.bgRemoved = false; renderNewItem(); };
 
@@ -1190,13 +1342,20 @@ function setPreview(d, blob) {
 
 async function onPick(file) {
   setBusy(true, 'Preparando a foto…');
+  let d;
   try {
-    const d = state.draft || (state.draft = newDraft());
+    d = state.draft || (state.draft = newDraft());
     const resized = await resizeToBlob(file, 1200);
-    d.original = resized; d.bgRemoved = false;
+    d.original = resized; d.cutout = null; d.cutoutError = null; d.bgRemoved = false;
     setPreview(d, resized);
-  } catch (e) { toast(errMsg(e), 'error'); }
-  setBusy(false); renderNewItem();
+  } catch (e) {
+    toast(errMsg(e), 'error'); setBusy(false); renderNewItem(); return;
+  }
+  setBusy(false);
+  await cutoutDraft(d);
+  renderNewItem();
+  if (d.cutout) toast('Peça recortada. Confira a prévia antes de salvar.', 'ok');
+  else toast('Não consegui recortar sozinho. Use "Ajustar recorte" ou salve a foto original.', 'error');
 }
 
 async function saveItem(addAnother) {
