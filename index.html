@@ -18,35 +18,21 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 
-  <script src="https://cdn.tailwindcss.com"></script>
   <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['Inter', 'system-ui', 'sans-serif'],
-            display: ['Fraunces', 'Georgia', 'serif'],
-          },
-        },
-      },
-    };
+    // Aplica o tema salvo antes de desenhar a tela (evita piscar a cor errada).
+    try { var __t = localStorage.getItem('sc_theme'); if (__t) document.documentElement.setAttribute('data-theme', __t); } catch (e) {}
   </script>
-  <style type="text/tailwindcss">
-    @layer components {
-      .btn { @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-medium transition active:scale-[.98] disabled:opacity-50 disabled:pointer-events-none; }
-      .btn-primary { @apply bg-stone-900 text-white hover:bg-stone-800; }
-      .btn-soft { @apply bg-stone-100 text-stone-800 hover:bg-stone-200; }
-      .btn-ghost { @apply text-stone-600 hover:bg-stone-100; }
-      .btn-danger { @apply bg-red-50 text-red-700 hover:bg-red-100; }
-      .input { @apply w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-base text-stone-900 placeholder-stone-400 outline-none focus:border-stone-900 focus:ring-0; }
-      .label { @apply mb-1.5 block text-xs font-medium uppercase tracking-wide text-stone-500; }
-      .chip { @apply inline-flex items-center gap-1.5 rounded-full border border-stone-200 bg-white px-3.5 py-2 text-sm text-stone-700 transition; }
-      .chip-on { @apply border-stone-900 bg-stone-900 text-white; }
-      .card { @apply rounded-3xl bg-white shadow-sm ring-1 ring-stone-100; }
-    }
-  </style>
   <style>
-    html, body { background: #fafaf9; }
+    /* Paleta de temas: a escala "stone" usa estas variáveis (r g b). Troque os valores para criar um tema novo. */
+    :root, :root[data-theme="classico"] { --s50: 250 250 249; --s100: 245 245 244; --s200: 231 229 228; --s300: 214 211 209; --s400: 168 162 158; --s500: 120 113 108; --s600: 87 83 78; --s700: 68 64 60; --s800: 41 37 36; --s900: 28 25 23; }
+    :root[data-theme="por-do-sol"] { --s50: 255 247 245; --s100: 255 234 229; --s200: 254 213 202; --s300: 251 185 167; --s400: 232 144 124; --s500: 138 90 80; --s600: 107 65 57; --s700: 79 46 40; --s800: 190 18 60; --s900: 225 29 72; }
+    :root[data-theme="oceano"] { --s50: 244 250 252; --s100: 229 243 247; --s200: 195 230 238; --s300: 144 208 221; --s400: 90 166 182; --s500: 74 109 116; --s600: 55 84 90; --s700: 41 63 68; --s800: 21 94 117; --s900: 14 116 144; }
+    :root[data-theme="lavanda"] { --s50: 250 247 255; --s100: 240 234 255; --s200: 222 210 251; --s300: 194 173 249; --s400: 155 133 218; --s500: 101 90 128; --s600: 77 68 102; --s700: 58 51 80; --s800: 109 40 217; --s900: 124 58 237; }
+    :root[data-theme="menta"] { --s50: 247 251 244; --s100: 235 246 228; --s200: 212 235 198; --s300: 175 220 152; --s400: 119 184 103; --s500: 78 106 70; --s600: 60 82 53; --s700: 45 63 41; --s800: 22 101 52; --s900: 21 128 61; }
+  </style>
+  <link rel="stylesheet" href="css/app.css">
+  <style>
+    html, body { background: rgb(var(--s50)); }
     /* Tamanho dos ícones sem depender do Tailwind: evita ícones gigantes se o CSS demorar ou falhar. */
     svg { flex-shrink: 0; width: 1.25rem; height: 1.25rem; }
     svg.h-3 { width: .75rem; height: .75rem; }
@@ -89,14 +75,14 @@
       bottom: 0;
       z-index: 20;
       padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
-      background: rgba(250, 250, 249, 0.96);
-      border-top: 1px solid #e7e5e4;
+      background: rgb(var(--s50) / 0.96);
+      border-top: 1px solid rgb(var(--s200));
       text-align: center;
       font-family: 'Inter', system-ui, sans-serif;
       font-size: 10px;
       font-weight: 500;
       letter-spacing: 0.08em;
-      color: #78716c;
+      color: rgb(var(--s500));
       pointer-events: none;
     }
     /* Com a navegação inferior visível, o crédito fica logo acima dela. */
@@ -166,10 +152,17 @@
       }, 12000);
       // Se os estilos (Tailwind) não carregarem, avisa em vez de mostrar a tela sem formatação.
       setTimeout(function () {
-        if (window.tailwind) return;
+        var busy = document.getElementById('busy');
+        var stylesOk = !!busy && getComputedStyle(busy).display === 'none';
+        if (stylesOk && window.__appBooted) return;
+        var info = document.createElement('p');
+        info.className = 'mx-4 mt-2 text-[11px] text-stone-500';
+        info.textContent = 'Diagnóstico: estilos ' + (stylesOk ? 'ok' : 'NÃO carregaram') + ' · app ' + (window.__appBooted ? 'iniciou' : 'NÃO iniciou') + ' · ' + navigator.userAgent.slice(0, 80);
+        document.body.appendChild(info);
+        if (stylesOk) return;
         var note = document.createElement('div');
         note.className = 'mx-4 mt-3 rounded-2xl bg-amber-50 p-3 text-xs text-amber-900';
-        note.textContent = 'Os estilos do app não carregaram. Verifique a internet, desative bloqueadores de conteúdo do Safari e recarregue a página.';
+        note.textContent = 'Os estilos do app não carregaram. Feche o app, abra de novo e, se persistir, me avise.';
         document.body.insertBefore(note, document.body.firstChild);
       }, 6000);
     })();
