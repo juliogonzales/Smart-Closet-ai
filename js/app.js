@@ -1938,6 +1938,32 @@ async function loadBodyPreview(path) {
   box.innerHTML = `<img src="${esc(data.signedUrl)}" alt="Sua foto de modelo" class="h-full w-full object-contain">`;
 }
 
+// Monta a prévia "vestir na pessoa" no próprio navegador (modo gratuito).
+// Desenha a foto de modelo e encaixa cada peça (fundo já removido) dentro da caixa que a IA indicou.
+async function composeLook(data) {
+  const load = (src) => new Promise((res, rej) => {
+    const im = new Image(); im.crossOrigin = 'anonymous';
+    im.onload = () => res(im); im.onerror = () => rej(new Error('Não consegui carregar uma das imagens.'));
+    im.src = src;
+  });
+  const base = await load(data.body_url);
+  const k = Math.min(1, 1200 / Math.max(base.naturalWidth, base.naturalHeight));
+  const W = Math.round(base.naturalWidth * k), H = Math.round(base.naturalHeight * k);
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const g = cv.getContext('2d');
+  g.drawImage(base, 0, 0, W, H);
+  for (const L of data.layers || []) {
+    let im;
+    try { im = await load(L.url); } catch { continue; }
+    const [x, y, w, h] = L.box;
+    const bx = x * W, by = y * H, bw = w * W, bh = h * H;
+    const s = Math.min(bw / im.naturalWidth, bh / im.naturalHeight);
+    const dw = im.naturalWidth * s, dh = im.naturalHeight * s;
+    g.drawImage(im, bx + (bw - dw) / 2, by + (bh - dh) / 2, dw, dh);
+  }
+  return await canvasToBlob(cv, 'image/jpeg', 0.9);
+}
+
 async function openTryOn(items) {
   if (!state.profile?.lgpd_consent_at) {
     toast('Aceite o uso da foto de modelo no Perfil para continuar.', 'error');
@@ -1949,19 +1975,29 @@ async function openTryOn(items) {
   }
   const root = openModal(`
     ${modalHeader('Vestir na pessoa')}
-    <p class="text-sm text-stone-600">A IA gera uma imagem sua usando estas peças. Pode levar até um minuto.</p>
+    <p class="text-sm text-stone-600">Monta uma prévia sua vestindo estas peças. Pode levar até um minuto.</p>
     <div class="mt-4 flex flex-wrap gap-2">${items.map((i) => `<div class="h-16 w-16 rounded-xl bg-stone-50 p-1"><img src="${esc(i.image_url)}" alt="" class="h-full w-full object-contain"></div>`).join('')}</div>
-    <button id="tryon-go" class="btn btn-primary mt-5 w-full">${icon('sparkles')} Gerar imagem</button>
+    <button id="tryon-go" class="btn btn-primary mt-5 w-full">${icon('sparkles')} Montar prévia</button>
     <div id="tryon-out" class="mt-5"></div>`);
   $('#tryon-go', root).onclick = async () => {
     const btn = $('#tryon-go', root);
-    btn.disabled = true; btn.textContent = 'Gerando…';
+    btn.disabled = true; btn.textContent = 'Montando…';
     try {
       const { data, error } = await withTimeout(
         sb.functions.invoke('tryon', { body: { item_ids: items.map((i) => i.id) } }),
         90000, 'A geração demorou demais. Tente de novo.');
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
+      if (data.mode === 'compose') {
+        const blob = await composeLook(data);
+        const local = URL.createObjectURL(blob);
+        $('#tryon-out', root).innerHTML = `
+          <img src="${local}" alt="Você vestindo o look" class="w-full rounded-3xl">
+          <p class="mt-2 text-xs text-stone-500">${data.approximate ? 'Não consegui localizar todas as peças com precisão, então usei posições padrão. ' : ''}Prévia montada no modo gratuito: o encaixe é aproximado. Nada foi guardado no servidor.</p>
+          <a href="${local}" download="look-smart-closet.jpg" class="btn btn-soft mt-3 w-full">Salvar imagem</a>`;
+        btn.remove();
+        return;
+      }
       $('#tryon-out', root).innerHTML = `
         <img src="${esc(data.url)}" alt="Você vestindo o look" class="w-full rounded-3xl">
         <p class="mt-2 text-xs text-stone-500">O link vale por 1 hora. A imagem fica guardada só para você.</p>
