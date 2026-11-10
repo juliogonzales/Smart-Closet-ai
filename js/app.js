@@ -59,6 +59,23 @@ const TERMS_HTML = `
   <p class="text-xs text-stone-500">Versão ${LGPD_VERSION}. O texto completo está em docs/TERMOS_LGPD.md no repositório.</p>`;
 const SEASONS = ['verão', 'outono', 'inverno', 'primavera'];
 const STYLES = ['casual', 'formal', 'esporte fino', 'street', 'esportivo', 'festa', 'minimalista', 'clássico'];
+const THEMES = [
+  { id: 'classico', name: 'Clássico', swatch: '#1c1917', meta: '#1c1917' },
+  { id: 'por-do-sol', name: 'Pôr do sol', swatch: '#e11d48', meta: '#e11d48' },
+  { id: 'oceano', name: 'Oceano', swatch: '#0e7490', meta: '#0e7490' },
+  { id: 'lavanda', name: 'Lavanda', swatch: '#7c3aed', meta: '#7c3aed' },
+  { id: 'menta', name: 'Verde', swatch: '#15803d', meta: '#15803d' }
+];
+function currentTheme() {
+  try { return localStorage.getItem('sc_theme') || 'classico'; } catch (e) { return 'classico'; }
+}
+function applyTheme(id) {
+  document.documentElement.setAttribute('data-theme', id);
+  try { localStorage.setItem('sc_theme', id); } catch (e) { /* navegação privada: o tema vale só nesta visita */ }
+  const t = THEMES.find((x) => x.id === id) || THEMES[0];
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', t.meta);
+}
 const PROFILE_STYLES = ['casual', 'esporte fino', 'street', 'minimalista', 'clássico', 'esportivo', 'elegante', 'boho'];
 const COLORS = {
   preto: '#111827', branco: '#ffffff', cinza: '#9ca3af', bege: '#d6c3a5', marrom: '#7c5a3c',
@@ -1913,6 +1930,7 @@ function renderProfile() {
   const counts = Object.keys(CATEGORIES).map((k) => [k, state.clothes.filter((c) => c.category === k).length]).filter(([, n]) => n);
   const canInstall = !!deferredInstall && !isStandalone();
   const iosHint = isIOS() && !isStandalone();
+  const theme = currentTheme();
 
   const paint = () => {
     view().innerHTML = `
@@ -1927,6 +1945,10 @@ function renderProfile() {
         </div>
 
         ${counts.length ? `<div class="mt-5 flex flex-wrap gap-2">${counts.map(([k, n]) => `<span class="rounded-full bg-stone-100 px-3 py-1 text-xs text-stone-600">${n} ${esc(CATEGORIES[k].toLowerCase())}</span>`).join('')}</div>` : ''}
+
+        <div class="mt-6"><span class="label">Tema do app</span>
+          <div class="grid grid-cols-5 gap-2">${THEMES.map((t) => `<button data-theme-pick="${t.id}" aria-pressed="${t.id === theme}" class="flex flex-col items-center gap-1.5 rounded-2xl bg-white p-2 ring-1 ${t.id === theme ? 'ring-2 ring-stone-900' : 'ring-stone-200'}"><span class="h-8 w-8 rounded-full ring-1 ring-black/10" style="background:${t.swatch}"></span><span class="text-[11px] leading-tight text-stone-600">${esc(t.name)}</span></button>`).join('')}</div>
+        </div>
 
         <div class="mt-6"><label class="label" for="name">Nome</label><input id="name" class="input" maxlength="80" value="${esc(name)}"></div>
         <div class="mt-5"><span class="label">Preferências de estilo</span>
@@ -1950,6 +1972,7 @@ function renderProfile() {
         </div>
       </div>`;
     $$('[data-s]').forEach((b) => (b.onclick = () => { name = $('#name').value; toggle(sel, b.dataset.s); p.full_name = name; paint(); }));
+    $$('[data-theme-pick]').forEach((b) => (b.onclick = () => { name = $('#name').value; applyTheme(b.dataset.themePick); paint(); }));
     $('#save').onclick = async () => {
       setBusy(true, 'Salvando…');
       const { data, error } = await sb.from('profiles').update({ full_name: $('#name').value.trim(), style_preferences: [...sel] }).eq('id', state.user.id).select().single();
