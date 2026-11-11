@@ -1402,15 +1402,18 @@ function pickGarment(results) {
   return { label: main, masks };
 }
 
-// Aplica a união das máscaras sobre o recorte: o que não é peça fica transparente.
-async function applyGarmentMasks(cutoutBlob, masks) {
-  const url = URL.createObjectURL(cutoutBlob);
+// A máscara do modelo vira a transparência FINAL; as cores vêm da foto original.
+// (O recorte anterior apagava partes de peças claras, então não é usado aqui.)
+async function applyGarmentMasks(cutoutBlob, masks, originalBlob) {
+  const cUrl = URL.createObjectURL(cutoutBlob);
+  const oUrl = URL.createObjectURL(originalBlob);
   try {
-    const img = await loadImg(url, false);
-    const w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+    const cImg = await loadImg(cUrl, false);
+    const w = cImg.naturalWidth || cImg.width, h = cImg.naturalHeight || cImg.height;
+    const oImg = await loadImg(oUrl, false);
     const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
     const g = cv.getContext('2d', { willReadFrequently: true });
-    g.drawImage(img, 0, 0);
+    g.drawImage(oImg, 0, 0, w, h);
     const im = g.getImageData(0, 0, w, h); const px = im.data;
     const union = new Uint8Array(w * h);
     for (const m of masks) {
@@ -1429,10 +1432,10 @@ async function applyGarmentMasks(cutoutBlob, masks) {
       const sd = sg.getImageData(0, 0, w, h).data;
       for (let p = 0; p < w * h; p++) if (sd[p * 4] > union[p]) union[p] = sd[p * 4];
     }
-    for (let p = 0; p < w * h; p++) px[p * 4 + 3] = Math.min(px[p * 4 + 3], union[p]);
+    for (let p = 0; p < w * h; p++) px[p * 4 + 3] = union[p];
     g.putImageData(im, 0, 0);
     return await canvasToBlob(cv, 'image/png');
-  } finally { URL.revokeObjectURL(url); }
+  } finally { URL.revokeObjectURL(cUrl); URL.revokeObjectURL(oUrl); }
 }
 
 // Recorte final: roda o modelo na foto ORIGINAL (precisa ver a pessoa) e corta o recorte pela peça.
@@ -1443,7 +1446,7 @@ async function keepGarmentOnly(cutoutBlob, originalBlob) {
     const results = await segment(url);
     const picked = pickGarment(results);
     if (!picked || !picked.masks.length) return cutoutBlob;
-    return await applyGarmentMasks(cutoutBlob, picked.masks);
+    return await applyGarmentMasks(cutoutBlob, picked.masks, originalBlob);
   } finally { URL.revokeObjectURL(url); }
 }
 
