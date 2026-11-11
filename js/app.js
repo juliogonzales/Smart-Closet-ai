@@ -68,18 +68,148 @@ const THEMES = [
   { id: 'oceano', name: 'Oceano', swatch: '#0e7490', meta: '#0e7490' },
   { id: 'lavanda', name: 'Lavanda', swatch: '#7c3aed', meta: '#7c3aed' },
   { id: 'menta', name: 'Verde', swatch: '#15803d', meta: '#15803d' },
-  { id: 'terracota', name: 'Terracota', swatch: '#c15a34', meta: '#c15a34' }
+  { id: 'terracota', name: 'Terracota', swatch: '#c15a34', meta: '#c15a34' },
+  { id: 'personalizado', name: 'Personalizado', swatch: '#c15a34', meta: '#c15a34' }
 ];
 function currentTheme() {
   try { return localStorage.getItem('sc_theme') || 'classico'; } catch (e) { return 'classico'; }
 }
+
+/* --- Tema personalizado: 2 cores escolhidas arrastando, o resto do tom é gerado --- */
+const CUSTOM_DEFAULT = { p: '#c15a34', s: '#f7efe8' };
+const CUSTOM_KEYS = ['--s50', '--s100', '--s200', '--s300', '--s400', '--s500', '--s600', '--s700', '--s800', '--s900'];
+const PRESET_COLORS = ['#c15a34', '#e11d48', '#db2777', '#7c3aed', '#2563eb', '#0e7490', '#15803d', '#f59e0b', '#1c1917', '#f7efe8'];
+function savedCustom() {
+  try { return { ...CUSTOM_DEFAULT, ...(JSON.parse(localStorage.getItem('sc_custom') || 'null') || {}) }; }
+  catch (e) { return { ...CUSTOM_DEFAULT }; }
+}
+const hexToRgb = (h) => { const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+const rgbToHex = (c) => '#' + c.map((v) => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0')).join('');
+const mixRgb = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
+function rgbToHsv([r, g, b]) {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
+  let h = 0;
+  if (d) {
+    if (max === r) h = ((g - b) / d) % 6;
+    else if (max === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    h *= 60; if (h < 0) h += 360;
+  }
+  return [h, max ? d / max : 0, max];
+}
+function hsvToRgb(h, s, v) {
+  const c = v * s, x = c * (1 - Math.abs(((h / 60) % 2) - 1)), m = v - c;
+  const [r, g, b] = h < 60 ? [c, x, 0] : h < 120 ? [x, c, 0] : h < 180 ? [0, c, x] : h < 240 ? [0, x, c] : h < 300 ? [x, 0, c] : [c, 0, x];
+  return [(r + m) * 255, (g + m) * 255, (b + m) * 255];
+}
+// Gera a escala de cinzas do app a partir de duas cores: principal (botões, títulos) e secundária (fundos e textos suaves)
+function customVars(p, s) {
+  const P = hexToRgb(p), S = hexToRgb(s), W = [255, 255, 255], K = [0, 0, 0];
+  const D = mixRgb(P, K, 0.7); // primária bem escura: dá um tom quente aos textos, combinando com o tema
+  const v = {
+    '--s50': mixRgb(S, W, 0.94), '--s100': mixRgb(S, W, 0.86), '--s200': mixRgb(S, W, 0.72), '--s300': mixRgb(S, W, 0.5), '--s400': mixRgb(S, W, 0.2),
+    '--s500': mixRgb(S, D, 0.55), '--s600': mixRgb(S, D, 0.7), '--s700': mixRgb(S, D, 0.85),
+    '--s800': mixRgb(P, K, 0.15), '--s900': P,
+  };
+  return Object.fromEntries(Object.entries(v).map(([k, c]) => [k, c.map(Math.round).join(' ')]));
+}
+function applyCustomVars(vars) { Object.entries(vars).forEach(([k, val]) => document.documentElement.style.setProperty(k, val)); }
+function clearCustomVars() { CUSTOM_KEYS.forEach((k) => document.documentElement.style.removeProperty(k)); }
+function luminance(hex) {
+  const [r, g, b] = hexToRgb(hex).map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+const contrastWithWhite = (hex) => 1.05 / (luminance(hex) + 0.05);
+
 function applyTheme(id) {
-  document.documentElement.setAttribute('data-theme', id);
+  const root = document.documentElement;
+  root.setAttribute('data-theme', id);
   try { localStorage.setItem('sc_theme', id); } catch (e) { /* navegação privada: o tema vale só nesta visita */ }
-  const t = THEMES.find((x) => x.id === id) || THEMES[0];
   const meta = document.querySelector('meta[name="theme-color"]');
+  if (id === 'personalizado') {
+    const c = savedCustom();
+    const vars = customVars(c.p, c.s);
+    applyCustomVars(vars);
+    try { localStorage.setItem('sc_custom_vars', JSON.stringify(vars)); } catch (e) { /* ignora */ }
+    if (meta) meta.setAttribute('content', c.p);
+    return;
+  }
+  clearCustomVars();
+  const t = THEMES.find((x) => x.id === id) || THEMES[0];
   if (meta) meta.setAttribute('content', t.meta);
 }
+// Ao fechar o editor sem salvar (X, toque fora ou Cancelar), volta para o tema anterior
+let onModalClose = null;
+
+function bindDrag(el, onMove) {
+  const move = (e) => {
+    const r = el.getBoundingClientRect();
+    const x = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+    const y = Math.min(1, Math.max(0, (e.clientY - r.top) / r.height));
+    onMove(x, y);
+  };
+  el.addEventListener('pointerdown', (e) => { el.setPointerCapture(e.pointerId); move(e); });
+  el.addEventListener('pointermove', (e) => { if (el.hasPointerCapture(e.pointerId)) move(e); });
+}
+
+function openThemeEditor() {
+  const prevId = currentTheme();
+  const saved = savedCustom();
+  const st = { p: saved.p, s: saved.s, target: 'p' };
+  const hsv = { p: rgbToHsv(hexToRgb(saved.p)), s: rgbToHsv(hexToRgb(saved.s)) };
+  const knobCss = (x, y, color) => `position:absolute;left:${x}%;top:${y}%;transform:translate(-50%,-50%);width:30px;height:30px;border-radius:9999px;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35);background:${color}`;
+
+  const root = openModal(`<div>
+    ${modalHeader('Cores do seu tema')}
+    <p class="text-sm text-stone-600">Escolha a cor principal (botões e títulos) e a secundária (fundos e textos suaves). Arraste o círculo até a cor que quiser.</p>
+    <div id="te-tabs" class="mt-4 grid grid-cols-2 gap-2"></div>
+    <div id="te-sq" class="relative mt-4 w-full rounded-2xl" style="height:200px;touch-action:none;cursor:crosshair"><div id="te-knob" style="pointer-events:none"></div></div>
+    <div id="te-hue" class="relative mt-3 w-full rounded-full" style="height:30px;touch-action:none;background:linear-gradient(to right,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00)"><div id="te-hknob" style="pointer-events:none"></div></div>
+    <div class="mt-4 flex flex-wrap gap-2">${PRESET_COLORS.map((c) => `<button data-preset="${c}" aria-label="Usar a cor ${c}" class="h-9 w-9 rounded-full ring-1 ring-black/10" style="background:${c}"></button>`).join('')}</div>
+    <div class="mt-5 rounded-2xl p-4" style="background:rgb(var(--s50));border:1px solid rgb(var(--s200))">
+      <p class="font-display text-xl" style="color:rgb(var(--s900))">Seu look de hoje</p>
+      <p class="mt-1 text-sm" style="color:rgb(var(--s700))">Assim vão ficar os títulos, fundos e textos.</p>
+      <span class="mt-3 inline-block rounded-full px-4 py-2 text-sm font-medium text-white" style="background:rgb(var(--s900))">Botão principal</span>
+    </div>
+    <p id="te-warn" class="mt-3 hidden rounded-2xl bg-amber-50 p-3 text-xs text-amber-800">A cor principal está clara demais para o texto branco dos botões. Escolha um tom um pouco mais forte.</p>
+    <div class="mt-5 grid grid-cols-2 gap-2">
+      <button id="te-cancel" class="btn btn-soft">Cancelar</button>
+      <button id="te-save" class="btn btn-primary">Usar este tema</button>
+    </div>
+  </div>`);
+
+  const paint = () => {
+    const [h, s, v] = hsv[st.target];
+    st[st.target] = rgbToHex(hsvToRgb(h, s, v));
+    const hueHex = rgbToHex(hsvToRgb(h, 1, 1));
+    $('#te-sq', root).style.background = `linear-gradient(to top,#000,rgba(0,0,0,0)),linear-gradient(to right,#fff,${hueHex})`;
+    $('#te-knob', root).style.cssText = knobCss(s * 100, (1 - v) * 100, st[st.target]);
+    $('#te-hknob', root).style.cssText = knobCss((h / 360) * 100, 50, hueHex);
+    $('#te-tabs', root).innerHTML = [['p', 'Principal'], ['s', 'Secundária']].map(([k, label]) =>
+      `<button data-t="${k}" aria-pressed="${st.target === k}" class="chip justify-center ${st.target === k ? 'chip-on' : ''}"><span class="mr-2 inline-block h-4 w-4 rounded-full ring-1 ring-black/10" style="background:${st[k]}"></span>${label}</button>`).join('');
+    $$('[data-t]', root).forEach((b) => (b.onclick = () => { st.target = b.dataset.t; paint(); }));
+    applyCustomVars(customVars(st.p, st.s));
+    $('#te-warn', root).classList.toggle('hidden', contrastWithWhite(st.p) >= 3);
+  };
+
+  bindDrag($('#te-sq', root), (x, y) => { const c = hsv[st.target]; hsv[st.target] = [c[0], x, 1 - y]; paint(); });
+  bindDrag($('#te-hue', root), (x) => { const c = hsv[st.target]; hsv[st.target] = [x * 360, c[1], c[2]]; paint(); });
+  $$('[data-preset]', root).forEach((b) => (b.onclick = () => { hsv[st.target] = rgbToHsv(hexToRgb(b.dataset.preset)); paint(); }));
+
+  onModalClose = () => applyTheme(prevId);
+  $('#te-cancel', root).onclick = () => { onModalClose = null; closeModal(); applyTheme(prevId); };
+  $('#te-save', root).onclick = () => {
+    try { localStorage.setItem('sc_custom', JSON.stringify({ p: st.p, s: st.s })); } catch (e) { /* ignora */ }
+    onModalClose = null;
+    closeModal();
+    applyTheme('personalizado');
+    toast('Tema personalizado aplicado', 'ok');
+    route();
+  };
+  paint();
+}
+
 const PROFILE_STYLES = ['casual', 'esporte fino', 'street', 'minimalista', 'clássico', 'esportivo', 'elegante', 'boho'];
 const COLORS = {
   preto: '#111827', branco: '#ffffff', cinza: '#9ca3af', bege: '#d6c3a5', marrom: '#7c5a3c',
@@ -181,6 +311,7 @@ function closeModal() {
   const root = $('#modal-root');
   if (!root.innerHTML) return;
   root.innerHTML = '';
+  if (onModalClose) { const restore = onModalClose; onModalClose = null; restore(); }
   try { lastFocus?.focus?.({ preventScroll: true }); } catch { /* ignora */ }
   lastFocus = null;
 }
@@ -1332,10 +1463,17 @@ async function removeBackground(blob) {
   try {
     const mod = await withTimeout(import('https://esm.sh/@imgly/background-removal@1.5.5'), 30000, 'timeout');
     const fn = mod.removeBackground || mod.default;
+    // A biblioteca reporta etapas diferentes (baixar o modelo, processar a imagem), cada uma de 0 a 100%.
+    // Mostra o nome da etapa e nunca recua o percentual dentro dela.
+    let stage = '', best = 0;
     out = await withTimeout(fn(blob, {
       output: { format: 'image/png' },
       progress: (key, cur, total) => {
-        if (total) setBusyText(`Removendo o fundo… ${Math.min(99, Math.round((cur / total) * 100))}%`);
+        if (!total) return;
+        const name = /fetch|download/i.test(key) ? 'Baixando o modelo de recorte' : 'Removendo o fundo';
+        if (name !== stage) { stage = name; best = 0; }
+        best = Math.max(best, Math.min(99, Math.round((cur / total) * 100)));
+        setBusyText(`${stage}… ${best}%`);
       },
     }), 150000, 'timeout');
   } catch (e) {
@@ -1376,7 +1514,9 @@ let segmenterPromise = null;
 function getSegmenter() {
   if (!segmenterPromise) {
     segmenterPromise = import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.6.1/+esm')
-      .then((m) => m.pipeline('image-segmentation', 'Xenova/segformer_b2_clothes'))
+      .then((m) => m.pipeline('image-segmentation', 'Xenova/segformer_b2_clothes', {
+        progress_callback: (p) => { if (p && p.status === 'progress') setBusyText(`Baixando o modelo de roupas… ${Math.round(p.progress || 0)}%`); },
+      }))
       .catch((e) => { segmenterPromise = null; throw e; });
   }
   return segmenterPromise;
@@ -2752,7 +2892,7 @@ function renderProfile() {
         ${counts.length ? `<div class="mt-5 flex flex-wrap gap-2">${counts.map(([k, n]) => `<span class="rounded-full bg-stone-100 px-3 py-1 text-xs text-stone-600">${n} ${esc(CATEGORIES[k].toLowerCase())}</span>`).join('')}</div>` : ''}
 
         <div class="mt-6"><span class="label">Tema do app</span>
-          <div class="grid grid-cols-3 gap-2">${THEMES.map((t) => `<button data-theme-pick="${t.id}" aria-pressed="${t.id === theme}" class="flex flex-col items-center gap-1.5 rounded-2xl bg-white p-2 ring-1 ${t.id === theme ? 'ring-2 ring-stone-900' : 'ring-stone-200'}"><span class="h-8 w-8 rounded-full ring-1 ring-black/10" style="background:${t.swatch}"></span><span class="text-[11px] leading-tight text-stone-600">${esc(t.name)}</span></button>`).join('')}</div>
+          <div class="grid grid-cols-3 gap-2">${THEMES.map((t) => `<button data-theme-pick="${t.id}" aria-pressed="${t.id === theme}" class="flex flex-col items-center gap-1.5 rounded-2xl bg-white p-2 ring-1 ${t.id === theme ? 'ring-2 ring-stone-900' : 'ring-stone-200'}"><span class="h-8 w-8 rounded-full ring-1 ring-black/10" style="background:${t.id === 'personalizado' ? `linear-gradient(135deg, ${savedCustom().p} 50%, ${savedCustom().s} 50%)` : t.swatch}"></span><span class="text-[11px] leading-tight text-stone-600">${esc(t.name)}</span></button>`).join('')}</div>
         </div>
 
         <div class="mt-6"><label class="label" for="name">Nome</label><input id="name" class="input" maxlength="80" value="${esc(name)}"></div>
@@ -2791,7 +2931,10 @@ function renderProfile() {
     $$('[data-s]').forEach((b) => (b.onclick = () => { name = $('#name').value; toggle(sel, b.dataset.s); p.full_name = name; paint(); }));
     $$('[data-unshare]').forEach((b) => (b.onclick = () => unshareOutfit(b.dataset.unshare)));
     $$('[data-delete-look]').forEach((b) => (b.onclick = () => deleteOwnOutfit(b.dataset.deleteLook)));
-    $$('[data-theme-pick]').forEach((b) => (b.onclick = () => { name = $('#name').value; applyTheme(b.dataset.themePick); paint(); }));
+    $$('[data-theme-pick]').forEach((b) => (b.onclick = () => {
+      if (b.dataset.themePick === 'personalizado') return openThemeEditor();
+      name = $('#name').value; applyTheme(b.dataset.themePick); paint();
+    }));
     $('#save').onclick = async () => {
       const hv = handleValue();
       if (hv === false) return toast('Use de 3 a 20 letras minúsculas, números, ponto ou _.', 'error');
