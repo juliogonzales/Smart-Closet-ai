@@ -2871,14 +2871,46 @@ window.addEventListener('appinstalled', () => { deferredInstall = null; toast('A
 const isStandalone = () => window.matchMedia?.('(display-mode: standalone)').matches || navigator.standalone === true;
 const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
 
+/* Bloco "Instalar e avisos no celular": passos por aparelho */
+function installBlockHtml() {
+  const standalone = isStandalone();
+  const ios = isIOS();
+  const steps = (list) => `<ol class="text-sm text-stone-600">${list.map((t, i) => `<li class="mt-1.5">${i + 1}. ${t}</li>`).join('')}</ol>`;
+  let html = '';
+  if (standalone) {
+    html += `<p class="text-sm text-stone-600">✓ App instalado neste aparelho.</p>`;
+  } else if (ios) {
+    html += `<p class="text-sm text-stone-600">No iPhone, instale pelo <b>Safari</b>:</p>` + steps([
+      'Abra este endereço no <b>Safari</b>. O Chrome do iPhone não instala nem envia avisos.',
+      'Toque no botão <b>Compartilhar</b> (quadrado com seta para cima).',
+      'Role a lista e toque em <b>Adicionar à Tela de Início</b>.',
+      'Feche o Safari e abra o <b>Smart Closet</b> pelo ícone novo. Os avisos só funcionam por ele.',
+    ]) + `<p class="mt-2 text-xs text-stone-500">Precisa de iPhone com iOS 16.4 ou mais novo (Ajustes → Geral → Sobre).</p>`;
+  } else if (deferredInstall) {
+    html += `<button id="install" class="btn btn-soft w-full">${icon('download')} Instalar o app</button>`;
+  } else {
+    html += `<p class="text-sm text-stone-600">No Android, instale pelo <b>Chrome</b>:</p>` + steps([
+      'Toque nos <b>três pontinhos</b> (⋮) no canto superior do Chrome.',
+      'Toque em <b>Instalar app</b> ou <b>Adicionar à tela inicial</b>.',
+      'Abra o Smart Closet pelo ícone novo e volte a esta tela.',
+    ]);
+  }
+  if (pushSupported()) {
+    html += `<div class="mt-2">${notif.pushOn
+      ? `<button id="push-off" class="btn btn-soft w-full">Desativar avisos com o celular fechado</button>`
+      : `<button id="push-on" class="btn btn-primary w-full">Ativar avisos com o celular fechado</button>`}</div>`;
+  } else if (!(ios && !standalone)) {
+    html += `<p class="mt-2 text-xs text-stone-500">Este aparelho não aceita avisos neste modo. Abra o app pela Tela de Início.</p>`;
+  }
+  return `<div class="rounded-2xl border border-stone-200 p-4 space-y-2"><h2 class="text-sm font-semibold">Instalar e avisos no celular</h2>${html}</div>`;
+}
+
 function renderProfile() {
   const p = state.profile;
   const sel = new Set(p.style_preferences || []);
   let name = p.full_name || '';
   const initials = (p.full_name || state.user.email || '?').trim().slice(0, 1).toUpperCase();
   const counts = Object.keys(CATEGORIES).map((k) => [k, state.clothes.filter((c) => c.category === k).length]).filter(([, n]) => n);
-  const canInstall = !!deferredInstall && !isStandalone();
-  const iosHint = isIOS() && !isStandalone();
   const theme = currentTheme();
 
   const paint = () => {
@@ -2915,8 +2947,7 @@ function renderProfile() {
           <p class="mb-3 text-xs text-stone-500">Looks que você mostra no feed. Você pode tirá-los do feed ou apagá-los.</p>
           <div class="space-y-2">${mySharedHtml()}</div></div>
         <div class="mt-8 space-y-2">
-          ${canInstall ? `<button id="install" class="btn btn-soft w-full">${icon('download')} Instalar o app</button>` : ''}
-          ${iosHint ? `<p class="rounded-2xl bg-stone-100 p-3 text-xs text-stone-600">Para instalar no iPhone: toque em Compartilhar e depois em “Adicionar à Tela de Início”.</p>` : ''}
+          ${installBlockHtml()}
           <a href="#/sobre" class="btn btn-soft w-full">Sobre o app</a>
           <a href="#/diagnostico" class="btn btn-soft w-full">Testar a IA</a>
           <button id="chpw" class="btn btn-soft w-full">Alterar senha</button>
@@ -2953,6 +2984,10 @@ function renderProfile() {
     renderPeopleBox();
     const inst = $('#install');
     if (inst) inst.onclick = async () => { deferredInstall.prompt(); await deferredInstall.userChoice; deferredInstall = null; renderProfile(); };
+    const po = $('#push-on');
+    if (po) po.onclick = async () => { await enablePush(); renderProfile(); };
+    const pf = $('#push-off');
+    if (pf) pf.onclick = async () => { await disablePush(); renderProfile(); };
     $('#chpw').onclick = openChangePassword;
     $('#wipe').onclick = wipeData;
     $('#delacc').onclick = deleteAccount;
