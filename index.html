@@ -1693,6 +1693,8 @@
     svg.h-4 { width: 1rem; height: 1rem; }
     svg.h-7 { width: 1.75rem; height: 1.75rem; }
     svg.h-8 { width: 2rem; height: 2rem; }
+    /* Barra inferior sempre em linha, mesmo se o JavaScript ainda usar a versão antiga das classes. */
+    #bottomnav > div { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
     body { -webkit-tap-highlight-color: transparent; }
     .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
     :focus-visible { outline: 2px solid #1c1917; outline-offset: 2px; }
