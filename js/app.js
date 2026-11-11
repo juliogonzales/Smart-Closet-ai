@@ -67,7 +67,8 @@ const THEMES = [
   { id: 'por-do-sol', name: 'Pôr do sol', swatch: '#e11d48', meta: '#e11d48' },
   { id: 'oceano', name: 'Oceano', swatch: '#0e7490', meta: '#0e7490' },
   { id: 'lavanda', name: 'Lavanda', swatch: '#7c3aed', meta: '#7c3aed' },
-  { id: 'menta', name: 'Verde', swatch: '#15803d', meta: '#15803d' }
+  { id: 'menta', name: 'Verde', swatch: '#15803d', meta: '#15803d' },
+  { id: 'terracota', name: 'Terracota', swatch: '#c15a34', meta: '#c15a34' }
 ];
 function currentTheme() {
   try { return localStorage.getItem('sc_theme') || 'classico'; } catch (e) { return 'classico'; }
@@ -2516,7 +2517,7 @@ function renderProfile() {
         ${counts.length ? `<div class="mt-5 flex flex-wrap gap-2">${counts.map(([k, n]) => `<span class="rounded-full bg-stone-100 px-3 py-1 text-xs text-stone-600">${n} ${esc(CATEGORIES[k].toLowerCase())}</span>`).join('')}</div>` : ''}
 
         <div class="mt-6"><span class="label">Tema do app</span>
-          <div class="grid grid-cols-5 gap-2">${THEMES.map((t) => `<button data-theme-pick="${t.id}" aria-pressed="${t.id === theme}" class="flex flex-col items-center gap-1.5 rounded-2xl bg-white p-2 ring-1 ${t.id === theme ? 'ring-2 ring-stone-900' : 'ring-stone-200'}"><span class="h-8 w-8 rounded-full ring-1 ring-black/10" style="background:${t.swatch}"></span><span class="text-[11px] leading-tight text-stone-600">${esc(t.name)}</span></button>`).join('')}</div>
+          <div class="grid grid-cols-3 gap-2">${THEMES.map((t) => `<button data-theme-pick="${t.id}" aria-pressed="${t.id === theme}" class="flex flex-col items-center gap-1.5 rounded-2xl bg-white p-2 ring-1 ${t.id === theme ? 'ring-2 ring-stone-900' : 'ring-stone-200'}"><span class="h-8 w-8 rounded-full ring-1 ring-black/10" style="background:${t.swatch}"></span><span class="text-[11px] leading-tight text-stone-600">${esc(t.name)}</span></button>`).join('')}</div>
         </div>
 
         <div class="mt-6"><label class="label" for="name">Nome</label><input id="name" class="input" maxlength="80" value="${esc(name)}"></div>
