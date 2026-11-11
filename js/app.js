@@ -1982,7 +1982,7 @@ function feedCardHtml(l) {
       <div class="flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-stone-200 text-sm font-medium text-stone-600" style="width:40px;height:40px">${l.owner_avatar ? `<img src="${esc(l.owner_avatar)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block">` : initial}</div>
       <div class="min-w-0 flex-1">
         <p class="truncate text-sm font-semibold">${handle}</p>
-        ${l.occasion ? `<p class="truncate text-xs text-stone-500">${esc(l.occasion)}</p>` : ''}
+        <p class="truncate text-xs text-stone-500">${l.occasion ? `${esc(l.occasion)} · ` : ''}${esc(timeAgoPt(l.created_at))}</p>
       </div>
       <button data-more="${esc(l.id)}" class="btn btn-ghost !p-2" aria-label="Opções do look">${icon('dots', 'h-5 w-5')}</button>
     </header>
