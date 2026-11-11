@@ -1,6 +1,6 @@
 // Service worker simples: network-first para arquivos do próprio app,
 // com fallback para o cache quando offline. Não intercepta Supabase/CDNs.
-const CACHE = 'smart-closet-v17';
+const CACHE = 'smart-closet-v18';
 const SHELL = [
   './',
   './index.html',
