@@ -118,6 +118,9 @@ const ICONS = {
   users: P('M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z'),
   thumb: P('M6.633 10.25c.806 0 1.533-.446 2.031-1.08a9.041 9.041 0 012.861-2.4c.723-.384 1.35-.956 1.653-1.715a4.498 4.498 0 00.322-1.672V3a.75.75 0 01.75-.75A2.25 2.25 0 0116.5 4.5c0 1.152-.26 2.243-.723 3.218-.266.558.107 1.282.725 1.282h3.126c1.026 0 1.945.694 2.054 1.715.045.422.068.85.068 1.285a11.95 11.95 0 01-2.649 7.521c-.388.482-.987.729-1.605.729H13.48c-.483 0-.964-.078-1.423-.23l-3.114-1.04a4.501 4.501 0 00-1.423-.23H5.904M14.25 9h2.25M5.904 18.5c.083.205.173.405.27.602.197.4-.078.898-.523.898h-.908c-.889 0-1.713-.518-1.972-1.368a12 12 0 01-.521-3.507c0-1.553.295-3.036.831-4.398C3.387 10.203 4.167 9.75 5 9.75h1.053c.472 0 .745.556.5.96a8.958 8.958 0 00-1.302 4.665c0 1.194.232 2.333.654 3.375z'),
   flag: P('M3 3v1.5M3 21v-6m0 0l2.77-.693a9 9 0 016.208.682l.108.054a9 9 0 006.086.71l3.114-.732a48.524 48.524 0 01-.005-10.499l-3.11.732a9 9 0 01-6.085-.711l-.108-.054a9 9 0 00-6.208-.682L3 4.5M3 15V4.5'),
+  bell: P('M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0'),
+  bellOff: P('M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0M3 3l18 18'),
+  dots: P('M12 6.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 12.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 18.75a.75.75 0 110-1.5.75.75 0 010 1.5z'),
   heart: P('M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z'),
   share: P('M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z'),
   trash: P('M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0'),
@@ -341,6 +344,7 @@ const NAV = [
 ];
 function renderNav(active) {
   const nav = $('#bottomnav');
+  updateBell(!!active);
   if (!active) { nav.classList.add('hidden'); return; }
   nav.classList.remove('hidden');
   nav.innerHTML = `<div class="mx-auto grid max-w-xl" style="grid-template-columns:repeat(${NAV.length},minmax(0,1fr))">
@@ -1963,30 +1967,48 @@ function paintFeed() {
   list.innerHTML = feedState.items.map(feedCardHtml).join('')
     + (feedState.more ? '<button id="feed-more" class="btn btn-soft w-full">Carregar mais</button>' : '');
   $$('[data-like]', list).forEach((b) => (b.onclick = () => toggleFeedLike(b.dataset.like)));
-  $$('[data-block]', list).forEach((b) => (b.onclick = () => blockFeedOwner(b.dataset.block)));
-  $$('[data-report]', list).forEach((b) => (b.onclick = () => reportFeedLook(b.dataset.report)));
+  $$('[data-more]', list).forEach((b) => (b.onclick = () => openFeedMenu(b.dataset.more)));
   const more = $('#feed-more');
   if (more) more.onclick = () => loadFeedPage(feedState.items.length);
 }
 
 function feedCardHtml(l) {
-  const who = l.owner_handle ? `@${esc(l.owner_handle)}` : esc(l.owner_name || 'Alguém');
+  const handle = l.owner_handle ? `@${esc(l.owner_handle)}` : esc(l.owner_name || 'Alguém');
   const initial = esc((l.owner_name || l.owner_handle || '?').slice(0, 1).toUpperCase());
-  return `<article class="rounded-[2rem] bg-white p-4 shadow-sm ring-1 ring-stone-100">
-    <div class="flex items-center gap-3">
-      <div class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-stone-200 text-sm font-medium text-stone-600">${l.owner_avatar ? `<img src="${esc(l.owner_avatar)}" alt="" class="h-full w-full object-cover">` : initial}</div>
-      <div class="min-w-0 flex-1"><p class="truncate text-sm font-medium">${who}</p>${l.occasion ? `<p class="truncate text-xs text-stone-500">${esc(l.occasion)}</p>` : ''}</div>
-    </div>
-    <div class="mt-3">${miniCollage(l.items || [])}</div>
-    <h3 class="mt-3 font-display text-lg leading-snug">${esc(l.title)}</h3>
-    <div class="mt-3 flex items-center justify-between gap-2">
-      <button data-like="${esc(l.id)}" aria-pressed="${!!l.liked}" class="btn ${l.liked ? 'btn-primary' : 'btn-soft'} !py-2 text-sm">${icon('heart', 'h-4 w-4')} ${Number(l.likes) || 0}</button>
-      <div class="flex items-center gap-1 text-xs">
-        <button data-block="${esc(l.id)}" class="rounded-full px-3 py-2 text-stone-500 hover:bg-stone-100">Bloquear</button>
-        <button data-report="${esc(l.id)}" class="rounded-full px-3 py-2 text-stone-500 hover:bg-stone-100">Denunciar</button>
+  const likes = Number(l.likes) || 0;
+  const heartStyle = l.liked ? 'style="color:#f43f5e;fill:#f43f5e"' : '';
+  return `<article class="overflow-hidden rounded-[2rem] bg-white shadow-sm ring-1 ring-stone-100">
+    <header class="flex items-center gap-3 px-4 pb-3 pt-4">
+      <div class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-stone-200 text-sm font-medium text-stone-600">${l.owner_avatar ? `<img src="${esc(l.owner_avatar)}" alt="" class="h-full w-full object-cover">` : initial}</div>
+      <div class="min-w-0 flex-1">
+        <p class="truncate text-sm font-semibold">${handle}</p>
+        ${l.occasion ? `<p class="truncate text-xs text-stone-500">${esc(l.occasion)}</p>` : ''}
       </div>
+      <button data-more="${esc(l.id)}" class="btn btn-ghost !p-2" aria-label="Opções do look">${icon('dots', 'h-5 w-5')}</button>
+    </header>
+    <div>${miniCollage(l.items || [])}</div>
+    <div class="px-4 pb-4 pt-3">
+      <button data-like="${esc(l.id)}" aria-pressed="${!!l.liked}" aria-label="${l.liked ? 'Descurtir' : 'Curtir'}" class="-ml-1 inline-flex items-center gap-2 rounded-full px-1 py-1 text-sm">
+        ${icon('heart', `h-7 w-7 ${l.liked ? '' : 'text-stone-800'}`).replace('<svg ', `<svg ${heartStyle} `)}
+        <span class="font-semibold">${likes} ${likes === 1 ? 'curtida' : 'curtidas'}</span>
+      </button>
+      <p class="mt-2 text-sm"><span class="font-semibold">${handle}</span> ${esc(l.title)}</p>
+      ${l.description ? `<p class="mt-1 line-clamp-2 text-sm text-stone-600">${esc(l.description)}</p>` : ''}
     </div>
   </article>`;
+}
+
+function openFeedMenu(id) {
+  const l = feedState.items.find((x) => x.id === id);
+  if (!l) return;
+  const who = l.owner_handle ? `@${l.owner_handle}` : 'esta pessoa';
+  const root = openModal(`${modalHeader('Opções do look')}
+    <div class="space-y-2">
+      <button data-act="block" class="btn btn-soft w-full justify-start">${icon('x')} Bloquear ${esc(who)}</button>
+      <button data-act="report" class="btn btn-soft w-full justify-start">${icon('flag')} Denunciar este look</button>
+    </div>`);
+  $('[data-act="block"]', root).onclick = () => { closeModal(); blockFeedOwner(id); };
+  $('[data-act="report"]', root).onclick = () => { closeModal(); reportFeedLook(id); };
 }
 
 async function toggleFeedLike(id) {
@@ -2019,6 +2041,160 @@ async function reportFeedLook(id) {
   feedState.items = feedState.items.filter((x) => x.id !== id);
   paintFeed();
   toast('Obrigado. Este look foi ocultado para você.', 'ok');
+}
+
+/* ============================================================
+   Notificações (sino): avisa quando alguém curte um look seu.
+   "Silenciar" desliga só o aviso na tela; as curtidas continuam no sino.
+   ============================================================ */
+const notif = { items: [], seen: null, channel: null, timer: null, openUnread: new Set() };
+
+function timeAgoPt(iso) {
+  const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
+  if (s < 60) return 'agora';
+  if (s < 3600) return `há ${Math.floor(s / 60)} min`;
+  if (s < 86400) return `há ${Math.floor(s / 3600)} h`;
+  if (s < 604800) return `há ${Math.floor(s / 86400)} d`;
+  return new Date(iso).toLocaleDateString('pt-BR');
+}
+
+function updateBell(show) {
+  const b = $('#bell');
+  if (!b) return;
+  b.classList.toggle('hidden', !show);
+  b.classList.toggle('flex', !!show);
+  if (show && state.session) { ensureNotifications(); paintBell(); }
+  else stopNotifications();
+}
+
+function paintBell() {
+  const b = $('#bell');
+  if (!b) return;
+  const unread = notif.items.filter((n) => !n.read_at).length;
+  const muted = !!state.profile?.notify_muted;
+  $('#bell-icon', b).innerHTML = icon(muted ? 'bellOff' : 'bell', 'h-5 w-5');
+  const badge = $('#bell-badge', b);
+  badge.textContent = unread > 9 ? '9+' : String(unread);
+  badge.classList.toggle('hidden', unread === 0);
+  b.setAttribute('aria-label', `Notificações${unread ? `, ${unread} não lidas` : ''}${muted ? ', alertas silenciados' : ''}`);
+}
+
+async function ensureNotifications() {
+  if (notif.started || !state.session) return;
+  notif.started = true;
+  // Tempo real (entrega imediata). Se não estiver disponível, o intervalo abaixo ainda atualiza.
+  try {
+    if (typeof sb.channel === 'function') {
+      notif.channel = sb.channel(`notif-${state.user.id}`)
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${state.user.id}` },
+          () => refreshNotifications({ alert: true }))
+        .subscribe();
+    }
+  } catch { notif.channel = null; }
+  clearInterval(notif.timer);
+  notif.timer = setInterval(() => {
+    if (document.visibilityState === 'visible') refreshNotifications({ alert: true });
+  }, 60000);
+  await refreshNotifications({ alert: false });
+}
+
+function stopNotifications() {
+  if (notif.channel) { try { sb.removeChannel(notif.channel); } catch { /* ignora */ } }
+  notif.channel = null; notif.started = false;
+  clearInterval(notif.timer); notif.timer = null;
+  notif.items = []; notif.seen = null;
+}
+
+async function refreshNotifications({ alert = false } = {}) {
+  if (!state.session) return;
+  const { data, error } = await sb.rpc('my_notifications', { p_limit: 30 });
+  if (error || !Array.isArray(data)) return;
+  const firstLoad = notif.seen === null;
+  const fresh = firstLoad ? [] : data.filter((n) => !notif.seen.has(n.id) && !n.read_at);
+  notif.seen = new Set(data.map((n) => n.id));
+  notif.items = data;
+  paintBell();
+  if (alert && fresh.length) announceLikes(fresh);
+  if ($('#notif-sheet')) paintNotifSheet();
+}
+
+function announceLikes(list) {
+  if (state.profile?.notify_muted) return; // silenciado: sem aviso, mas segue no sino
+  const first = list[0];
+  const who = first.actor_handle ? `@${first.actor_handle}` : (first.actor_name || 'Alguém');
+  const msg = list.length === 1
+    ? `${who} curtiu seu look${first.outfit_title ? ` «${first.outfit_title}»` : ''}`
+    : `${list.length} pessoas curtiram seus looks`;
+  toast(msg, 'ok');
+  try { navigator.vibrate?.(80); } catch { /* ignora */ }
+}
+
+function notifSheetHtml() {
+  const muted = !!state.profile?.notify_muted;
+  const rows = notif.items.length ? notif.items.map((n) => {
+    const who = n.actor_handle ? `@${esc(n.actor_handle)}` : esc(n.actor_name || 'Alguém');
+    const av = n.actor_avatar
+      ? `<img src="${esc(n.actor_avatar)}" alt="" class="h-full w-full object-cover">`
+      : esc((n.actor_name || n.actor_handle || '?').slice(0, 1).toUpperCase());
+    const isNew = notif.openUnread.has(n.id);
+    return `<button data-notif="${esc(n.outfit_id)}" class="flex w-full items-center gap-3 rounded-2xl p-3 text-left hover:bg-stone-50 ${isNew ? 'bg-stone-100' : ''}">
+      <span class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-stone-200 text-sm font-medium text-stone-600">${av}</span>
+      <span class="min-w-0 flex-1">
+        <span class="block text-sm"><span class="font-semibold">${who}</span> curtiu seu look</span>
+        <span class="block truncate text-xs text-stone-500">${esc(n.outfit_title || 'Look')} · ${esc(timeAgoPt(n.created_at))}</span>
+      </span>
+    </button>`;
+  }).join('') : '<p class="rounded-2xl bg-stone-50 p-4 text-center text-sm text-stone-500">Nenhuma curtida ainda. Compartilhe um look no feed para receber curtidas.</p>';
+  return `
+    <div class="mb-4 flex items-center justify-between">
+      <h3 class="font-display text-xl">Notificações</h3>
+      <button data-close class="btn btn-ghost !p-2" aria-label="Fechar">${icon('x')}</button>
+    </div>
+    <label class="flex cursor-pointer items-center justify-between gap-4 rounded-2xl bg-stone-50 p-4">
+      <span class="min-w-0">
+        <span class="block text-sm font-medium">Avisar quando curtirem</span>
+        <span class="block text-xs text-stone-500">${muted
+          ? 'Silenciado: não aparece aviso na tela, mas as curtidas continuam aqui no sino.'
+          : 'Aparece um aviso na tela sempre que alguém curtir um dos seus looks.'}</span>
+      </span>
+      <input id="notif-alerts" type="checkbox" class="h-6 w-11 shrink-0 accent-stone-900" ${muted ? '' : 'checked'}>
+    </label>
+    <div class="mt-4 space-y-1">${rows}</div>`;
+}
+
+function paintNotifSheet() {
+  const box = $('#notif-sheet');
+  if (!box) return;
+  box.innerHTML = notifSheetHtml();
+  $$('[data-close]', box).forEach((b) => (b.onclick = closeModal));
+  $('#notif-alerts', box).onchange = (e) => setNotifyMuted(!e.target.checked);
+  $$('[data-notif]', box).forEach((b) => (b.onclick = () => { closeModal(); go(`#/outfit/${b.dataset.notif}`); }));
+}
+
+async function openNotifications() {
+  if (!state.session) return;
+  const unreadIds = notif.items.filter((n) => !n.read_at).map((n) => n.id);
+  notif.openUnread = new Set(unreadIds); // mantém o destaque nesta abertura
+  openModal(`<div id="notif-sheet"></div>`);
+  paintNotifSheet();
+  if (!unreadIds.length) return;
+  const now = new Date().toISOString();
+  const { error } = await sb.from('notifications').update({ read_at: now }).in('id', unreadIds);
+  if (error) return toast(errMsg(error), 'error');
+  notif.items.forEach((n) => { if (unreadIds.includes(n.id)) n.read_at = now; });
+  paintBell();
+}
+
+async function setNotifyMuted(muted) {
+  const { error } = await sb.from('profiles').update({ notify_muted: muted }).eq('id', state.user.id);
+  if (error) {
+    paintNotifSheet();
+    return toast(errMsg(error), 'error');
+  }
+  state.profile = { ...state.profile, notify_muted: muted };
+  paintBell();
+  paintNotifSheet();
+  toast(muted ? 'Avisos silenciados. As curtidas continuam no sino.' : 'Avisos de curtida ativados.', 'ok');
 }
 
 /* ============================================================
@@ -2606,6 +2782,7 @@ async function init() {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
   window.addEventListener('hashchange', route);
+  $('#bell')?.addEventListener('click', openNotifications);
   if (!sb) return route();
 
   // O listener precisa existir ANTES de getSession(): é ele que recebe o
@@ -2637,6 +2814,7 @@ async function init() {
 
   // Atualiza os dados ao voltar para o app depois de um tempo (outro aparelho pode ter mudado algo)
   document.addEventListener('visibilitychange', async () => {
+    if (document.visibilityState === 'visible' && state.session) refreshNotifications({ alert: true });
     if (document.visibilityState !== 'visible' || !state.session || !state.loaded) return;
     if (Date.now() - state.loadedAt < 120000) return;
     try {
