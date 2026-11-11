@@ -51,6 +51,8 @@ const LGPD_VERSION = '1.1';
 const APP_VERSION = '2.0';
 // Preencha com o e-mail de contato para dúvidas de privacidade (ex.: 'voce@exemplo.com').
 const CONTACT_EMAIL = 'juliogonzales@live.com';
+// Chave PÚBLICA para Web Push (pode ficar no código). A chave privada fica só no Supabase.
+const VAPID_PUBLIC_KEY = 'BOuZwbYCVCsU0KoEnHHBY37mAp_2zdStuXxgJPQWfMXRaDeruUkuNs9UmG_F_wbtWrLnU_IEcrmc1pBgKlU_TbE';
 const TERMS_HTML = `
   <p><b>Quem trata seus dados:</b> o responsável pelo Smart Closet AI.${CONTACT_EMAIL ? ` Contato: <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a>.` : ''}</p>
   <p><b>O que guardamos:</b> sua conta, as fotos e dados das peças e os looks que você montar ou salvar.</p>
@@ -1977,9 +1979,9 @@ function feedCardHtml(l) {
   const initial = esc((l.owner_name || l.owner_handle || '?').slice(0, 1).toUpperCase());
   const likes = Number(l.likes) || 0;
   const heartStyle = l.liked ? 'style="color:#f43f5e;fill:#f43f5e"' : '';
-  return `<article class="overflow-hidden rounded-[2rem] bg-white shadow-sm ring-1 ring-stone-100">
-    <header class="flex items-center gap-3 px-4 pb-3 pt-4">
-      <div class="flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-stone-200 text-sm font-medium text-stone-600" style="width:40px;height:40px">${l.owner_avatar ? `<img src="${esc(l.owner_avatar)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block">` : initial}</div>
+  return `<article class="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-stone-100">
+    <header class="flex items-center gap-2.5 px-3 pb-2 pt-2.5">
+      <div class="flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-stone-200 text-sm font-medium text-stone-600" style="width:32px;height:32px">${l.owner_avatar ? `<img src="${esc(l.owner_avatar)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block">` : initial}</div>
       <div class="min-w-0 flex-1">
         <p class="truncate text-sm font-semibold">${handle}</p>
         <p class="truncate text-xs text-stone-500">${l.occasion ? `${esc(l.occasion)} · ` : ''}${esc(timeAgoPt(l.created_at))}</p>
@@ -1987,13 +1989,13 @@ function feedCardHtml(l) {
       <button data-more="${esc(l.id)}" class="btn btn-ghost !p-2" aria-label="Opções do look">${icon('dots', 'h-5 w-5')}</button>
     </header>
     <div>${miniCollage(l.items || [])}</div>
-    <div class="px-4 pb-4 pt-3">
-      <button data-like="${esc(l.id)}" aria-pressed="${!!l.liked}" aria-label="${l.liked ? 'Descurtir' : 'Curtir'}" class="-ml-1 inline-flex items-center gap-2 rounded-full px-1 py-1 text-sm">
-        ${icon('heart', `h-7 w-7 ${l.liked ? '' : 'text-stone-800'}`).replace('<svg ', `<svg ${heartStyle} `)}
+    <div class="px-3 pb-3 pt-2">
+      <button data-like="${esc(l.id)}" aria-pressed="${!!l.liked}" aria-label="${l.liked ? 'Descurtir' : 'Curtir'}" class="-ml-1 inline-flex items-center gap-1.5 rounded-full px-1 py-0.5 text-xs">
+        ${icon('heart', `h-5 w-5 ${l.liked ? '' : 'text-stone-800'}`).replace('<svg ', `<svg ${heartStyle} `)}
         <span class="font-semibold">${likes} ${likes === 1 ? 'curtida' : 'curtidas'}</span>
       </button>
-      <p class="mt-2 text-sm"><span class="font-semibold">${handle}</span> ${esc(l.title)}</p>
-      ${l.description ? `<p class="mt-1 line-clamp-2 text-sm text-stone-600">${esc(l.description)}</p>` : ''}
+      <p class="mt-1 text-xs"><span class="font-semibold">${handle}</span> ${esc(l.title)}</p>
+      ${l.description ? `<p class="mt-0.5 line-clamp-2 text-xs text-stone-600">${esc(l.description)}</p>` : ''}
     </div>
   </article>`;
 }
@@ -2088,7 +2090,60 @@ async function reportFeedLook(id) {
    Notificações (sino): avisa quando alguém curte um look seu.
    "Silenciar" desliga só o aviso na tela; as curtidas continuam no sino.
    ============================================================ */
-const notif = { items: [], seen: null, channel: null, timer: null, openUnread: new Set() };
+const notif = { items: [], seen: null, channel: null, timer: null, started: false, openUnread: new Set(), pushOn: false };
+
+/* --- Web Push: aviso com o celular fechado --- */
+const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+function urlB64ToUint8(b64) {
+  const pad = '='.repeat((4 - (b64.length % 4)) % 4);
+  const raw = atob((b64 + pad).replace(/-/g, '+').replace(/_/g, '/'));
+  return Uint8Array.from(raw, (c) => c.charCodeAt(0));
+}
+async function currentPushSub() {
+  if (!pushSupported()) return null;
+  const reg = await Promise.race([
+    navigator.serviceWorker.ready,
+    new Promise((resolve) => setTimeout(() => resolve(null), 2000)),
+  ]);
+  return reg ? reg.pushManager.getSubscription() : null;
+}
+async function claimPushEndpoint(sub) {
+  const j = sub.toJSON();
+  const { error } = await sb.rpc('claim_push_endpoint', {
+    p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth,
+    p_user_agent: navigator.userAgent.slice(0, 200),
+  });
+  return error;
+}
+async function syncPushSubscription() {
+  if (!pushSupported() || Notification.permission !== 'granted') return;
+  const sub = await currentPushSub().catch(() => null);
+  if (sub) await claimPushEndpoint(sub).catch(() => {});
+  notif.pushOn = !!sub;
+}
+async function enablePush() {
+  if (!pushSupported()) return toast('Este aparelho não aceita avisos neste modo. Instale o app na Tela de Início.', 'error');
+  const perm = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
+  if (perm !== 'granted') return toast('Permissão negada. Ative as notificações nos ajustes do aparelho.', 'error');
+  const reg = await navigator.serviceWorker.ready;
+  const sub = (await reg.pushManager.getSubscription())
+    || (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64ToUint8(VAPID_PUBLIC_KEY) }));
+  const error = await claimPushEndpoint(sub);
+  if (error) return toast(errMsg(error), 'error');
+  notif.pushOn = true;
+  paintNotifSheet();
+  toast('Avisos com o celular fechado ativados', 'ok');
+}
+async function disablePush() {
+  const sub = await currentPushSub().catch(() => null);
+  if (sub) {
+    await sb.from('push_subscriptions').delete().eq('endpoint', sub.endpoint);
+    await sub.unsubscribe().catch(() => {});
+  }
+  notif.pushOn = false;
+  paintNotifSheet();
+  toast('Avisos com o celular desativados neste aparelho', 'ok');
+}
 
 function timeAgoPt(iso) {
   const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
@@ -2137,6 +2192,7 @@ async function ensureNotifications() {
     if (document.visibilityState === 'visible') refreshNotifications({ alert: true });
   }, 60000);
   await refreshNotifications({ alert: false });
+  syncPushSubscription();
 }
 
 function stopNotifications() {
@@ -2200,7 +2256,26 @@ function notifSheetHtml() {
       </span>
       <input id="notif-alerts" type="checkbox" class="h-6 w-11 shrink-0 accent-stone-900" ${muted ? '' : 'checked'}>
     </label>
+    ${pushRowHtml()}
     <div class="mt-4 space-y-1">${rows}</div>`;
+}
+
+function pushRowHtml() {
+  const ios = isIOS() && !isStandalone();
+  if (!pushSupported() && !ios) return '';
+  const muted = !!state.profile?.notify_muted;
+  let text;
+  if (ios) text = 'No iPhone, instale o app antes: toque em Compartilhar e depois em “Adicionar à Tela de Início”.';
+  else if (notif.pushOn) text = muted
+    ? 'Ativo neste aparelho, mas silenciado acima: você não recebe aviso com o app fechado.'
+    : 'Ativo neste aparelho. Você recebe o aviso mesmo com o app fechado.';
+  else text = 'Receba o aviso mesmo com o app fechado.';
+  const btn = ios ? '' : `<button id="push-toggle" class="btn ${notif.pushOn ? 'btn-soft' : 'btn-primary'} mt-3 w-full !py-2.5 text-sm">${notif.pushOn ? 'Desativar neste aparelho' : 'Ativar avisos'}</button>`;
+  return `<div class="mt-3 rounded-2xl bg-stone-50 p-4">
+    <p class="text-sm font-medium">Aviso com o celular fechado</p>
+    <p class="mt-0.5 text-xs text-stone-500">${text}</p>
+    ${btn}
+  </div>`;
 }
 
 function paintNotifSheet() {
@@ -2209,11 +2284,14 @@ function paintNotifSheet() {
   box.innerHTML = notifSheetHtml();
   $$('[data-close]', box).forEach((b) => (b.onclick = closeModal));
   $('#notif-alerts', box).onchange = (e) => setNotifyMuted(!e.target.checked);
+  const pt = $('#push-toggle', box);
+  if (pt) pt.onclick = () => (notif.pushOn ? disablePush() : enablePush());
   $$('[data-notif]', box).forEach((b) => (b.onclick = () => { closeModal(); go(`#/outfit/${b.dataset.notif}`); }));
 }
 
 async function openNotifications() {
   if (!state.session) return;
+  notif.pushOn = !!(await currentPushSub().catch(() => null));
   const unreadIds = notif.items.filter((n) => !n.read_at).map((n) => n.id);
   notif.openUnread = new Set(unreadIds); // mantém o destaque nesta abertura
   openModal(`<div id="notif-sheet"></div>`);
