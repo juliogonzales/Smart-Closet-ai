@@ -1979,7 +1979,7 @@ function feedCardHtml(l) {
   const heartStyle = l.liked ? 'style="color:#f43f5e;fill:#f43f5e"' : '';
   return `<article class="overflow-hidden rounded-[2rem] bg-white shadow-sm ring-1 ring-stone-100">
     <header class="flex items-center gap-3 px-4 pb-3 pt-4">
-      <div class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-stone-200 text-sm font-medium text-stone-600">${l.owner_avatar ? `<img src="${esc(l.owner_avatar)}" alt="" class="h-full w-full object-cover">` : initial}</div>
+      <div class="flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-stone-200 text-sm font-medium text-stone-600" style="width:40px;height:40px">${l.owner_avatar ? `<img src="${esc(l.owner_avatar)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block">` : initial}</div>
       <div class="min-w-0 flex-1">
         <p class="truncate text-sm font-semibold">${handle}</p>
         ${l.occasion ? `<p class="truncate text-xs text-stone-500">${esc(l.occasion)}</p>` : ''}
@@ -2134,11 +2134,11 @@ function notifSheetHtml() {
   const rows = notif.items.length ? notif.items.map((n) => {
     const who = n.actor_handle ? `@${esc(n.actor_handle)}` : esc(n.actor_name || 'Alguém');
     const av = n.actor_avatar
-      ? `<img src="${esc(n.actor_avatar)}" alt="" class="h-full w-full object-cover">`
+      ? `<img src="${esc(n.actor_avatar)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block">`
       : esc((n.actor_name || n.actor_handle || '?').slice(0, 1).toUpperCase());
     const isNew = notif.openUnread.has(n.id);
     return `<button data-notif="${esc(n.outfit_id)}" class="flex w-full items-center gap-3 rounded-2xl p-3 text-left hover:bg-stone-50 ${isNew ? 'bg-stone-100' : ''}">
-      <span class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-stone-200 text-sm font-medium text-stone-600">${av}</span>
+      <span class="flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-stone-200 text-sm font-medium text-stone-600" style="width:40px;height:40px">${av}</span>
       <span class="min-w-0 flex-1">
         <span class="block text-sm"><span class="font-semibold">${who}</span> curtiu seu look</span>
         <span class="block truncate text-xs text-stone-500">${esc(n.outfit_title || 'Look')} · ${esc(timeAgoPt(n.created_at))}</span>
