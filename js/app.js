@@ -1180,6 +1180,133 @@ async function hasPlainBackground(blob) {
   } finally { URL.revokeObjectURL(url); }
 }
 
+// Limpeza do recorte da IA: (a) névoa semitransparente vira opaca ou some; (b) respingos
+// soltos são apagados, mantendo só as partes grandes; (c) furos dentro da peça são
+// preenchidos com a cor da foto original.
+async function cleanCutout(maskBlob, origBlob) {
+  const mUrl = URL.createObjectURL(maskBlob);
+  const oUrl = URL.createObjectURL(origBlob);
+  try {
+    const mImg = await loadImg(mUrl, false);
+    const oImg = await loadImg(oUrl, false);
+    const k = Math.min(1, 1000 / Math.max(mImg.naturalWidth, mImg.naturalHeight));
+    const w = Math.max(1, Math.round(mImg.naturalWidth * k)), h = Math.max(1, Math.round(mImg.naturalHeight * k));
+    const N = w * h;
+    const cm = document.createElement('canvas'); cm.width = w; cm.height = h;
+    const gm = cm.getContext('2d', { willReadFrequently: true });
+    gm.drawImage(mImg, 0, 0, w, h);
+    const im = gm.getImageData(0, 0, w, h); const px = im.data;
+    const co = document.createElement('canvas'); co.width = w; co.height = h;
+    const go = co.getContext('2d', { willReadFrequently: true });
+    go.drawImage(oImg, 0, 0, w, h);
+    const orig = go.getImageData(0, 0, w, h).data;
+
+    // (a) refino pela cor: alfa firme = peça; alfa baixo = fundo. O meio-termo (a "névoa"
+    // cinza que deixava as mangas fantasmas) só continua peça se a cor original for parecida
+    // com a das partes firmes ao redor. Assim a manga preta fica sólida e o fundo some.
+    const R = 4, W1 = w + 1;
+    const I0 = new Float64Array(W1 * (h + 1));
+    const IR = new Float64Array(W1 * (h + 1));
+    const IG = new Float64Array(W1 * (h + 1));
+    const IB = new Float64Array(W1 * (h + 1));
+    for (let y = 0; y < h; y++) {
+      let rc = 0, rr = 0, rg = 0, rb = 0;
+      for (let x = 0; x < w; x++) {
+        const p = y * w + x;
+        if (px[p * 4 + 3] >= 230) { const i = p * 4; rc++; rr += orig[i]; rg += orig[i + 1]; rb += orig[i + 2]; }
+        const j = (y + 1) * W1 + (x + 1), up = y * W1 + (x + 1);
+        I0[j] = I0[up] + rc; IR[j] = IR[up] + rr; IG[j] = IG[up] + rg; IB[j] = IB[up] + rb;
+      }
+    }
+    const box = (I, x0, y0, x1, y1) => I[y1 * W1 + x1] - I[y0 * W1 + x1] - I[y1 * W1 + x0] + I[y0 * W1 + x0];
+    // cor de referência: vizinhança firme próxima; se não houver, vizinhança maior;
+    // se ainda não houver (manga inteira em névoa), a cor média de toda a peça firme
+    const gc = box(I0, 0, 0, w, h);
+    const gMean = gc ? [box(IR, 0, 0, w, h) / gc, box(IG, 0, 0, w, h) / gc, box(IB, 0, 0, w, h) / gc] : null;
+    const keep = new Uint8Array(N);
+    for (let p = 0; p < N; p++) {
+      const a = px[p * 4 + 3];
+      if (a >= 230) { keep[p] = 1; continue; }
+      if (a < 25) continue;
+      const x = p % w, y = (p / w) | 0;
+      let ref = null;
+      for (const r of [R, R * 3]) {
+        const x0 = Math.max(0, x - r), x1 = Math.min(w, x + r + 1), y0 = Math.max(0, y - r), y1 = Math.min(h, y + r + 1);
+        const c = box(I0, x0, y0, x1, y1);
+        if (c >= 8) { ref = [box(IR, x0, y0, x1, y1) / c, box(IG, x0, y0, x1, y1) / c, box(IB, x0, y0, x1, y1) / c]; break; }
+      }
+      if (!ref) ref = gMean;
+      if (!ref) continue;
+      const i = p * 4;
+      const d = Math.abs(orig[i] - ref[0]) + Math.abs(orig[i + 1] - ref[1]) + Math.abs(orig[i + 2] - ref[2]);
+      if (d < 90) keep[p] = 1;
+    }
+    // suaviza só a borda (1 px) para não ficar serrilhado
+    const soft = new Uint8Array(N);
+    for (let p = 0; p < N; p++) {
+      const x = p % w, y = (p / w) | 0;
+      let s = 0, n = 0;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        const xx = x + dx, yy = y + dy;
+        if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
+        s += keep[yy * w + xx]; n++;
+      }
+      soft[p] = Math.round((s / n) * 255);
+    }
+    for (let p = 0; p < N; p++) px[p * 4 + 3] = soft[p];
+
+    // (b) componentes conectados: mantém só os grandes (>= 2% da maior peça)
+    const solid = new Uint8Array(N);
+    for (let p = 0; p < N; p++) solid[p] = px[p * 4 + 3] > 127 ? 1 : 0;
+    const label = new Int32Array(N).fill(-1);
+    const sizes = [];
+    const stack = [];
+    for (let s = 0; s < N; s++) {
+      if (!solid[s] || label[s] >= 0) continue;
+      const id = sizes.length; let size = 0;
+      label[s] = id; stack.push(s);
+      while (stack.length) {
+        const p = stack.pop(); size++;
+        const x = p % w, y = (p / w) | 0;
+        if (x > 0 && solid[p - 1] && label[p - 1] < 0) { label[p - 1] = id; stack.push(p - 1); }
+        if (x < w - 1 && solid[p + 1] && label[p + 1] < 0) { label[p + 1] = id; stack.push(p + 1); }
+        if (y > 0 && solid[p - w] && label[p - w] < 0) { label[p - w] = id; stack.push(p - w); }
+        if (y < h - 1 && solid[p + w] && label[p + w] < 0) { label[p + w] = id; stack.push(p + w); }
+      }
+      sizes.push(size);
+    }
+    const biggest = sizes.length ? Math.max(...sizes) : 0;
+    if (!biggest) return maskBlob;
+    for (let p = 0; p < N; p++) {
+      const l = label[p];
+      if (l < 0 || sizes[l] < biggest * 0.02) px[p * 4 + 3] = 0;
+    }
+
+    // (c) furos: transparente que não se liga à borda vira peça, com a cor original
+    const outside = new Uint8Array(N);
+    const st2 = [];
+    const seedOut = (p) => { if (!outside[p] && px[p * 4 + 3] < 128) { outside[p] = 1; st2.push(p); } };
+    for (let x = 0; x < w; x++) { seedOut(x); seedOut(x + (h - 1) * w); }
+    for (let y = 0; y < h; y++) { seedOut(y * w); seedOut(y * w + w - 1); }
+    while (st2.length) {
+      const p = st2.pop(); const x = p % w, y = (p / w) | 0;
+      if (x > 0) seedOut(p - 1);
+      if (x < w - 1) seedOut(p + 1);
+      if (y > 0) seedOut(p - w);
+      if (y < h - 1) seedOut(p + w);
+    }
+    for (let p = 0; p < N; p++) {
+      if (px[p * 4 + 3] < 128 && !outside[p]) {
+        const i = p * 4;
+        px[i] = orig[i]; px[i + 1] = orig[i + 1]; px[i + 2] = orig[i + 2]; px[i + 3] = 255;
+      }
+    }
+
+    gm.putImageData(im, 0, 0);
+    return await canvasToBlob(cm, 'image/png');
+  } finally { URL.revokeObjectURL(mUrl); URL.revokeObjectURL(oUrl); }
+}
+
 // Remoção de fundo: IA primeiro (funciona em cama, cabide e fundo colorido).
 // O plano B por cor só roda se o fundo for liso; caso contrário a foto original é preservada.
 async function removeBackground(blob) {
@@ -1203,6 +1330,8 @@ async function removeBackground(blob) {
     setBusyText('Removendo o fundo (modo simples)…');
     out = await simpleBgRemove(blob);
   }
+  try { out = await cleanCutout(out, blob); }
+  catch (e) { console.warn('limpeza do recorte falhou; usando o recorte original', e); }
   let cropped = await autocrop(out);
   if (cropped.opaque < 0.03 && method === 'ia' && await hasPlainBackground(blob)) {
     // IA apagou quase tudo num fundo liso: tenta o modo simples antes de desistir
