@@ -20,7 +20,14 @@
 
   <script>
     // Aplica o tema salvo antes de desenhar a tela (evita piscar a cor errada).
-    try { var __t = localStorage.getItem('sc_theme'); if (__t) document.documentElement.setAttribute('data-theme', __t); } catch (e) {}
+    try {
+      var __t = localStorage.getItem('sc_theme');
+      if (__t) document.documentElement.setAttribute('data-theme', __t);
+      if (__t === 'personalizado') {
+        var __v = JSON.parse(localStorage.getItem('sc_custom_vars') || 'null');
+        if (__v) for (var __k in __v) document.documentElement.style.setProperty(__k, __v[__k]);
+      }
+    } catch (e) {}
   </script>
   <style>
     /* Paleta de temas: a escala "stone" usa estas variáveis (r g b). Troque os valores para criar um tema novo. */
@@ -416,6 +423,9 @@
   .mt-24 {
     margin-top: calc(var(--spacing) * 24);
   }
+  .mr-2 {
+    margin-right: calc(var(--spacing) * 2);
+  }
   .mb-3 {
     margin-bottom: calc(var(--spacing) * 3);
   }
@@ -457,6 +467,9 @@
   }
   .inline {
     display: inline;
+  }
+  .inline-block {
+    display: inline-block;
   }
   .inline-flex {
     display: inline-flex;
@@ -505,6 +518,9 @@
   }
   .h-8 {
     height: calc(var(--spacing) * 8);
+  }
+  .h-9 {
+    height: calc(var(--spacing) * 9);
   }
   .h-10 {
     height: calc(var(--spacing) * 10);
@@ -568,6 +584,9 @@
   }
   .w-8 {
     width: calc(var(--spacing) * 8);
+  }
+  .w-9 {
+    width: calc(var(--spacing) * 9);
   }
   .w-10 {
     width: calc(var(--spacing) * 10);
@@ -644,9 +663,6 @@
   }
   .grid-cols-3 {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-  .grid-cols-5 {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
   .flex-col {
     flex-direction: column;
@@ -945,6 +961,9 @@
   }
   .py-1\.5 {
     padding-block: calc(var(--spacing) * 1.5);
+  }
+  .py-2 {
+    padding-block: calc(var(--spacing) * 2);
   }
   .py-2\.5 {
     padding-block: calc(var(--spacing) * 2.5);
