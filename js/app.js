@@ -52,7 +52,7 @@ const APP_VERSION = '2.0';
 // Preencha com o e-mail de contato para dúvidas de privacidade (ex.: 'voce@exemplo.com').
 const CONTACT_EMAIL = 'juliogonzales@live.com';
 // Chave PÚBLICA para Web Push (pode ficar no código). A chave privada fica só no Supabase.
-const VAPID_PUBLIC_KEY = 'BOuZwbYCVCsU0KoEnHHBY37mAp_2zdStuXxgJPQWfMXRaDeruUkuNs9UmG_F_wbtWrLnU_IEcrmc1pBgKlU_TbE';
+const VAPID_PUBLIC_KEY = 'BL9RcI3Wrp-bV3y_ylxxpgv-lRW0c67_bfVhsDlncvTvCyxvihKiUAWLA8vHA5i4S2LblEo2igsWzNSLP950jiM';
 const TERMS_HTML = `
   <p><b>Quem trata seus dados:</b> o responsável pelo Smart Closet AI.${CONTACT_EMAIL ? ` Contato: <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a>.` : ''}</p>
   <p><b>O que guardamos:</b> sua conta, as fotos e dados das peças e os looks que você montar ou salvar.</p>
