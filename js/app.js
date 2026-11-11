@@ -57,7 +57,11 @@ const TERMS_HTML = `
   <p><b>Quem trata seus dados:</b> o responsável pelo Smart Closet AI.${CONTACT_EMAIL ? ` Contato: <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a>.` : ''}</p>
   <p><b>O que guardamos:</b> sua conta, as fotos e dados das peças e os looks que você montar ou salvar.</p>
   <p><b>Google Gemini:</b> ao usar a IA (preencher dados da peça, sugerir looks ou testar a IA), a foto da peça ou a lista de peças escolhidas é enviada ao Google Gemini. Nenhuma foto de pessoa é solicitada ou usada.</p>
+  <p><b>Recorte das peças:</b> o recorte é feito no seu aparelho, por modelos que rodam no navegador. Se a foto da peça mostrar uma pessoa vestindo a roupa, ela é processada só no seu aparelho para separar a peça; o recorte guardado contém apenas a peça.</p>
   <p><b>Prévia do look:</b> é montada no seu próprio aparelho, a partir dos recortes das suas peças. Não é enviada para a IA e não fica guardada no servidor.</p>
+  <p><b>Feed e looks compartilhados:</b> um look só aparece no feed se você escolher "Todos" ou "Só pessoas selecionadas". Quem vê o feed vê seu @apelido, sua foto de perfil, o título, a descrição e as peças do look. Você pode tirar um look do feed ou apagá-lo a qualquer momento. Pessoas que você bloqueou não veem seus looks, e você não vê os delas.</p>
+  <p><b>Curtidas, avaliações e avisos:</b> quando alguém curte seu look, você recebe um aviso com o @ de quem curtiu. Suas avaliações ("gostei", "não gostei", "vou usar") são usadas para a IA entender o seu gosto. Os avisos aparecem no sino do app e, se você permitir, como notificação no celular. Você pode silenciar os avisos a qualquer momento; as curtidas continuam no sino.</p>
+  <p><b>Denúncias:</b> uma denúncia é analisada pela equipe do app. O look denunciado fica oculto para quem denunciou.</p>
   <p><b>Seus direitos:</b> acessar, corrigir, excluir seus dados e retirar o consentimento a qualquer momento, em Perfil. Você pode excluir a conta inteira em Perfil > Excluir minha conta.</p>
   <p class="text-xs text-stone-500">Versão ${LGPD_VERSION}. O texto completo está em docs/TERMOS_LGPD.md no repositório.</p>`;
 const SEASONS = ['verão', 'outono', 'inverno', 'primavera'];
