@@ -48,8 +48,9 @@ const CATEGORIES = {
 };
 const CAT_ORDER = ['outerwear', 'top', 'fullbody', 'bottom', 'shoes', 'accessory'];
 const LGPD_VERSION = '1.1';
+const APP_VERSION = '2.0';
 // Preencha com o e-mail de contato para dúvidas de privacidade (ex.: 'voce@exemplo.com').
-const CONTACT_EMAIL = '';
+const CONTACT_EMAIL = 'juliogonzales@live.com';
 const TERMS_HTML = `
   <p><b>Quem trata seus dados:</b> o responsável pelo Smart Closet AI.${CONTACT_EMAIL ? ` Contato: <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a>.` : ''}</p>
   <p><b>O que guardamos:</b> sua conta, as fotos e dados das peças e os looks que você montar ou salvar.</p>
@@ -114,6 +115,9 @@ const ICONS = {
   sparkles: P('M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z'),
   user: P('M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z'),
   plus: P('M12 4.5v15m7.5-7.5h-15'),
+  users: P('M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z'),
+  thumb: P('M6.633 10.25c.806 0 1.533-.446 2.031-1.08a9.041 9.041 0 012.861-2.4c.723-.384 1.35-.956 1.653-1.715a4.498 4.498 0 00.322-1.672V3a.75.75 0 01.75-.75A2.25 2.25 0 0116.5 4.5c0 1.152-.26 2.243-.723 3.218-.266.558.107 1.282.725 1.282h3.126c1.026 0 1.945.694 2.054 1.715.045.422.068.85.068 1.285a11.95 11.95 0 01-2.649 7.521c-.388.482-.987.729-1.605.729H13.48c-.483 0-.964-.078-1.423-.23l-3.114-1.04a4.501 4.501 0 00-1.423-.23H5.904M14.25 9h2.25M5.904 18.5c.083.205.173.405.27.602.197.4-.078.898-.523.898h-.908c-.889 0-1.713-.518-1.972-1.368a12 12 0 01-.521-3.507c0-1.553.295-3.036.831-4.398C3.387 10.203 4.167 9.75 5 9.75h1.053c.472 0 .745.556.5.96a8.958 8.958 0 00-1.302 4.665c0 1.194.232 2.333.654 3.375z'),
+  flag: P('M3 3v1.5M3 21v-6m0 0l2.77-.693a9 9 0 016.208.682l.108.054a9 9 0 006.086.71l3.114-.732a48.524 48.524 0 01-.005-10.499l-3.11.732a9 9 0 01-6.085-.711l-.108-.054a9 9 0 00-6.208-.682L3 4.5M3 15V4.5'),
   heart: P('M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z'),
   share: P('M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z'),
   trash: P('M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0'),
@@ -243,13 +247,13 @@ const newGen = () => ({
 const state = {
   session: null, user: null, profile: null,
   clothes: [], outfits: [], loaded: false, loadedAt: 0,
-  closetFilter: 'all', closetQuery: '', closetSort: 'category', draft: null, gen: newGen(),
+  closetFilter: 'all', closetQuery: '', closetSort: 'category', draft: null, gen: newGen(), feedback: new Map(), people: null,
 };
 
 function resetState() {
   Object.assign(state, {
     session: null, user: null, profile: null, clothes: [], outfits: [],
-    loaded: false, loadedAt: 0, closetFilter: 'all', closetQuery: '', closetSort: 'category', draft: null, gen: newGen(),
+    loaded: false, loadedAt: 0, closetFilter: 'all', closetQuery: '', closetSort: 'category', draft: null, gen: newGen(), feedback: new Map(), people: null,
   });
 }
 
@@ -331,6 +335,7 @@ async function fnError(e) {
 const NAV = [
   { id: 'home', label: 'Início', icon: 'home' },
   { id: 'closet', label: 'Guarda-roupa', icon: 'closet' },
+  { id: 'feed', label: 'Feed', icon: 'users' },
   { id: 'create', label: 'Criar look', icon: 'sparkles' },
   { id: 'profile', label: 'Perfil', icon: 'user' },
 ];
@@ -338,7 +343,7 @@ function renderNav(active) {
   const nav = $('#bottomnav');
   if (!active) { nav.classList.add('hidden'); return; }
   nav.classList.remove('hidden');
-  nav.innerHTML = `<div class="mx-auto grid max-w-xl grid-cols-4">
+  nav.innerHTML = `<div class="mx-auto grid max-w-xl" style="grid-template-columns:repeat(${NAV.length},minmax(0,1fr))">
     ${NAV.map((n) => `
       <a href="#/${n.id}" class="flex flex-col items-center gap-1 py-2.5 text-[11px] ${n.id === active ? 'font-semibold text-stone-900' : 'text-stone-500'}" ${n.id === active ? 'aria-current="page"' : ''}>
         ${icon(n.icon, 'h-6 w-6')}<span>${n.label}</span>
@@ -350,7 +355,7 @@ const go = (hash) => { if (location.hash === hash) route(); else location.hash =
 const TITLES = {
   home: 'Início', closet: 'Guarda-roupa', create: 'Criar look', profile: 'Perfil',
   login: 'Entrar', register: 'Criar conta', reset: 'Redefinir senha', outfit: 'Look',
-  share: 'Look compartilhado', diagnostico: 'Testar a IA', onboarding: 'Bem-vinda(o)',
+  feed: 'Feed', sobre: 'Sobre o app', share: 'Look compartilhado', diagnostico: 'Testar a IA', onboarding: 'Bem-vinda(o)',
 };
 
 /* ============================================================
@@ -368,6 +373,7 @@ async function route() {
   // Rotas que funcionam com ou sem login
   if (name === 'share') { renderNav(null); return renderShare(arg); }
   if (name === 'diagnostico') { renderNav(state.session ? 'profile' : null); return renderDiagnostics(); }
+  if (name === 'sobre') { renderNav(state.session ? 'profile' : null); return renderAbout(); }
 
   if (!state.session) {
     renderNav(null);
@@ -394,6 +400,7 @@ async function route() {
     case 'onboarding': renderNav(null); return renderOnboarding();
     case 'closet': renderNav('closet'); return arg === 'new' ? renderNewItem() : renderCloset();
     case 'create': renderNav('create'); return renderCreate();
+    case 'feed': renderNav('feed'); return renderFeed();
     case 'profile': renderNav('profile'); return renderProfile();
     case 'outfit': renderNav('home'); return renderOutfitDetail(arg);
     case 'home': renderNav('home'); return renderHome();
@@ -1549,6 +1556,7 @@ function renderCreate() {
           <p class="mt-1 text-sm text-stone-600">${esc(r.description)}</p>
           ${r.tips ? `<p class="mt-3 rounded-2xl bg-stone-100 p-3 text-sm text-stone-600"><b>Dica:</b> ${esc(r.tips)}</p>` : ''}
           ${r.missing ? `<div class="mt-3 rounded-2xl border border-dashed border-stone-300 p-3 text-sm text-stone-600"><b>Para completar:</b> ${esc(r.missing)}</div>` : ''}
+          <div id="social-bar" class="mt-5"></div>
           <div class="mt-5 grid grid-cols-2 gap-2">
             <button id="fav" class="btn ${r.saved_id ? 'btn-primary' : 'btn-soft'}">${icon(r.saved_id ? 'check' : 'heart')} ${r.saved_id ? 'Nos favoritos' : 'Salvar nos Favoritos'}</button>
             <button id="share" class="btn btn-soft">${icon('share')} Compartilhar</button>
@@ -1570,6 +1578,7 @@ function renderCreate() {
     $('#share').onclick = shareGenerated;
     $('#tryon').onclick = () => openLookPreview(r.items);
     bindSwap($('#result-card'), (itemId) => openSwap(r.items, itemId, applyGeneratedItems));
+    hydrateSocialBar(r.saved_id || null);
   }
 }
 
@@ -1708,6 +1717,7 @@ function renderOutfitDetail(id) {
       ${o.occasion ? `<p class="mt-4 text-xs uppercase tracking-wide text-stone-500">${esc(o.occasion)}</p>` : ''}
       <p class="mt-1 text-sm text-stone-600">${esc(o.description || '')}</p>
       ${o.missing_suggestions ? `<div class="mt-3 rounded-2xl border border-dashed border-stone-300 p-3 text-sm text-stone-600"><b>Para completar:</b> ${esc(o.missing_suggestions)}</div>` : ''}
+      <div id="social-bar" class="mt-4"></div>
       <p class="mt-4 text-xs text-stone-500">${o.is_public ? 'Link público ativo: quem tem o link vê este look.' : 'Este look é privado.'}</p>
       <div class="mt-3 grid grid-cols-2 gap-2">
         <button id="share" class="btn btn-primary" ${items.length ? '' : 'disabled'}>${icon('share')} Compartilhar</button>
@@ -1717,6 +1727,7 @@ function renderOutfitDetail(id) {
       ${o.is_public ? `<button id="unshare" class="btn btn-ghost mt-2 w-full text-sm">Desativar link público</button>` : ''}
     </div>`;
   $('#share').onclick = () => openShare(id);
+  hydrateSocialBar(id);
   $('#tryon').onclick = () => openLookPreview(items);
   $('#rename').onclick = async () => {
     const t = await promptDialog({ title: 'Renomear look', label: 'Nome do look', value: o.title });
@@ -1745,6 +1756,269 @@ function renderOutfitDetail(id) {
     if (state.gen.result?.saved_id === id) state.gen.result.saved_id = null;
     toast('Look excluído'); go('#/home');
   };
+}
+
+/* ============================================================
+   Feedback do look (gostei / não gostei / vou usar) e feed social
+   ============================================================ */
+const FEED_PAGE = 20;
+let feedState = null;
+
+// @apelido válido, null (vazio) ou false (inválido)
+function handleValue() {
+  const raw = ($('#handle')?.value || '').trim().toLowerCase().replace(/^@/, '');
+  if (!raw) return null;
+  return /^[a-z0-9_.]{3,20}$/.test(raw) ? raw : false;
+}
+
+// Look gerado pela IA ainda não salvo: salva antes de registrar a avaliação.
+async function resolveLookId(id) {
+  if (id) return id;
+  const r = state.gen.result;
+  if (!r) throw new Error('Gere um look primeiro.');
+  if (!r.saved_id) {
+    setBusy(true, 'Salvando look…');
+    try { await saveGenerated(); }
+    catch (e) { setBusy(false); toast(errMsg(e), 'error'); throw e; }
+    setBusy(false);
+    toast('Look salvo nos favoritos para registrar sua avaliação.', 'ok');
+    if (location.hash.startsWith('#/create')) renderCreate();
+  }
+  return r.saved_id;
+}
+
+async function loadFeedback(id) {
+  const { data } = await sb.from('outfit_feedback').select('rating, will_wear').eq('outfit_id', id).maybeSingle();
+  state.feedback.set(id, data ? { rating: data.rating, will_wear: !!data.will_wear } : { rating: null, will_wear: false });
+}
+
+function socialBarHtml(id) {
+  const fb = (id && state.feedback.get(id)) || {};
+  const o = id ? state.outfits.find((x) => x.id === id) : null;
+  const vis = o?.feed_visibility || 'off';
+  const visLabel = vis === 'everyone' ? 'No feed: todos' : vis === 'selected' ? 'No feed: só selecionados' : 'Compartilhar no feed';
+  return `<div class="rounded-2xl bg-stone-50 p-3 ring-1 ring-stone-200">
+    <p class="text-xs font-medium uppercase tracking-wide text-stone-500">O que você achou deste look?</p>
+    <div class="mt-2 grid grid-cols-3 gap-2">
+      <button data-fb="1" aria-pressed="${fb.rating === 1}" class="chip justify-center !px-2 ${fb.rating === 1 ? 'chip-on' : ''}">${icon('thumb', 'h-4 w-4')} Gostei</button>
+      <button data-fb="-1" aria-pressed="${fb.rating === -1}" class="chip justify-center !px-2 ${fb.rating === -1 ? 'chip-on' : ''}">${icon('thumb', 'h-4 w-4 rotate-180')} Não gostei</button>
+      <button data-wear aria-pressed="${!!fb.will_wear}" class="chip justify-center !px-2 ${fb.will_wear ? 'chip-on' : ''}">${icon('check', 'h-4 w-4')} Vou usar</button>
+    </div>
+    <button data-feed class="btn btn-soft mt-2 w-full !py-2.5 text-sm">${icon('users', 'h-4 w-4')} ${visLabel}</button>
+  </div>`;
+}
+
+function bindSocialBar(id) {
+  const root = $('#social-bar');
+  if (!root) return;
+  $$('[data-fb]', root).forEach((b) => (b.onclick = async () => {
+    const lid = await resolveLookId(id).catch(() => null);
+    if (lid) setFeedback(lid, { rating: Number(b.dataset.fb) });
+  }));
+  const w = $('[data-wear]', root);
+  if (w) w.onclick = async () => {
+    const lid = await resolveLookId(id).catch(() => null);
+    if (lid) setFeedback(lid, { will_wear: !state.feedback.get(lid)?.will_wear });
+  };
+  const f = $('[data-feed]', root);
+  if (f) f.onclick = async () => {
+    const lid = await resolveLookId(id).catch(() => null);
+    if (lid) openFeedSheet(lid);
+  };
+}
+
+function redrawBar(id) {
+  const el = $('#social-bar');
+  if (!el) return;
+  el.innerHTML = socialBarHtml(id);
+  bindSocialBar(id);
+}
+
+async function hydrateSocialBar(id) {
+  if (id) await loadFeedback(id);
+  redrawBar(id);
+}
+
+async function setFeedback(lid, patch) {
+  const cur = state.feedback.get(lid) || { rating: null, will_wear: false };
+  const next = { ...cur, ...patch };
+  if ('rating' in patch && patch.rating === cur.rating) next.rating = null; // segundo toque desfaz
+  const { error } = await sb.from('outfit_feedback').upsert({
+    user_id: state.user.id, outfit_id: lid, rating: next.rating, will_wear: !!next.will_wear,
+    updated_at: new Date().toISOString(),
+  }, { onConflict: 'user_id,outfit_id' });
+  if (error) return toast(errMsg(error), 'error');
+  state.feedback.set(lid, next);
+  if ('rating' in patch && next.rating) toast('Obrigado! Isso ajuda a IA a entender o seu gosto.', 'ok');
+  redrawBar(lid);
+}
+
+function openFeedSheet(lid) {
+  const o = state.outfits.find((x) => x.id === lid);
+  const cur = o?.feed_visibility || 'off';
+  const opts = [
+    ['off', 'Não compartilhar', 'Só você vê este look.'],
+    ['everyone', 'Todos', 'Qualquer pessoa com conta, exceto quem você bloqueou.'],
+    ['selected', 'Só pessoas selecionadas', 'Apenas quem está na sua lista de permissão (Perfil > Pessoas).'],
+  ];
+  const root = openModal(`
+    ${modalHeader('Mostrar no feed')}
+    <p class="mt-1 text-sm text-stone-600">Escolha quem pode ver este look no feed.</p>
+    <div class="mt-4 space-y-2">
+      ${opts.map(([v, t, d]) => `<button data-vis="${v}" aria-pressed="${cur === v}" class="w-full rounded-2xl p-4 text-left ring-1 ${cur === v ? 'ring-2 ring-stone-900 bg-stone-50' : 'ring-stone-200 bg-white'}">
+        <span class="block text-sm font-medium">${t}</span><span class="mt-0.5 block text-xs text-stone-500">${d}</span></button>`).join('')}
+    </div>
+    ${!state.profile?.handle ? '<p class="mt-4 rounded-2xl bg-amber-50 p-3 text-sm text-amber-800">Defina seu @apelido em Perfil para aparecer no feed.</p>' : ''}
+  `);
+  $$('[data-vis]', root).forEach((b) => (b.onclick = async () => {
+    const v = b.dataset.vis;
+    if (v !== 'off' && !state.profile?.handle) return toast('Defina seu @apelido em Perfil primeiro.', 'error');
+    const { error } = await sb.from('outfits').update({ feed_visibility: v }).eq('id', lid);
+    if (error) return toast(errMsg(error), 'error');
+    if (o) o.feed_visibility = v;
+    closeModal();
+    toast(v === 'off' ? 'Look fora do feed' : 'Look publicado no feed', 'ok');
+    route();
+  }));
+}
+
+/* --- Pessoas: listas de permissão e de bloqueio --- */
+async function renderPeopleBox() {
+  const box = $('#people-box');
+  if (!box) return;
+  const { data, error } = await sb.rpc('my_people');
+  if (!box.isConnected) return;
+  if (error) { box.innerHTML = `<p class="text-sm text-red-700">${esc(errMsg(error))}</p>`; return; }
+  const rows = Array.isArray(data) ? data : [];
+  state.people = rows;
+  const group = (kind, title, help) => {
+    const list = rows.filter((r) => r.kind === kind);
+    return `<div class="rounded-2xl bg-white p-3 ring-1 ring-stone-200">
+      <p class="text-sm font-medium">${title}</p><p class="mt-0.5 text-xs text-stone-500">${help}</p>
+      <div class="mt-2 flex flex-wrap gap-2">${list.length
+        ? list.map((r) => `<span class="chip">@${esc(r.handle || '')} <button data-rm="${esc(r.target_id)}" data-kind="${kind}" class="ml-1 text-stone-500" aria-label="Remover @${esc(r.handle || '')}">${icon('x', 'h-3.5 w-3.5')}</button></span>`).join('')
+        : '<span class="text-xs text-stone-400">Ninguém ainda</span>'}</div>
+      <button data-add="${kind}" class="btn btn-soft mt-3 w-full !py-2 text-sm">Adicionar @apelido</button>
+    </div>`;
+  };
+  box.innerHTML = group('allow', 'Lista de permissão', 'Quem vê os looks marcados como "Só pessoas selecionadas".')
+    + group('block', 'Lista de bloqueio', 'Essas pessoas não veem seus looks e você não vê os delas.');
+  $$('[data-add]', box).forEach((b) => (b.onclick = () => addPerson(b.dataset.add)));
+  $$('[data-rm]', box).forEach((b) => (b.onclick = () => removePerson(b.dataset.rm, b.dataset.kind)));
+}
+
+async function addPerson(kind) {
+  const raw = await promptDialog({ title: 'Adicionar pessoa', label: '@apelido da pessoa', value: '', confirmLabel: 'Adicionar', maxLength: 25 });
+  if (!raw) return;
+  const { data, error } = await sb.rpc('find_user_by_handle', { p_handle: raw.trim() });
+  if (error) return toast(errMsg(error), 'error');
+  if (!data) return toast('Não encontramos esse @apelido.', 'error');
+  const { error: e2 } = await sb.from('user_lists').insert({ owner_id: state.user.id, target_id: data.id, kind });
+  if (e2 && e2.code !== '23505') return toast(errMsg(e2), 'error');
+  if (kind === 'block') {
+    await sb.from('user_lists').delete().eq('owner_id', state.user.id).eq('target_id', data.id).eq('kind', 'allow');
+  }
+  toast(`@${data.handle} adicionado`, 'ok');
+  renderPeopleBox();
+}
+
+async function removePerson(target, kind) {
+  const { error } = await sb.from('user_lists').delete()
+    .eq('owner_id', state.user.id).eq('target_id', target).eq('kind', kind);
+  if (error) return toast(errMsg(error), 'error');
+  renderPeopleBox();
+}
+
+/* --- Feed --- */
+async function renderFeed() {
+  feedState = { items: [], more: false };
+  view().innerHTML = `<div class="fade-up">
+    <h1 class="font-display text-3xl">Feed</h1>
+    <p class="mt-1 text-sm text-stone-500">Looks que outras pessoas compartilharam com você.</p>
+    <div id="feed-list" class="mt-5 space-y-5"><p class="text-sm text-stone-500">Carregando…</p></div>
+  </div>`;
+  await loadFeedPage(0);
+}
+
+async function loadFeedPage(offset) {
+  const { data, error } = await sb.rpc('feed_looks', { p_limit: FEED_PAGE, p_offset: offset });
+  if (!$('#feed-list')) return;
+  if (error) { $('#feed-list').innerHTML = `<p class="rounded-2xl bg-red-50 p-4 text-sm text-red-700">${esc(errMsg(error))}</p>`; return; }
+  const rows = Array.isArray(data) ? data : [];
+  feedState.items.push(...rows);
+  feedState.more = rows.length === FEED_PAGE;
+  paintFeed();
+}
+
+function paintFeed() {
+  const list = $('#feed-list');
+  if (!list) return;
+  if (!feedState.items.length) {
+    list.innerHTML = `<div class="rounded-[2rem] bg-white p-6 text-center ring-1 ring-stone-200">
+      <p class="font-display text-xl">Nada no feed por enquanto</p>
+      <p class="mt-2 text-sm text-stone-500">Quando alguém compartilhar um look com você, ele aparece aqui. Você também pode compartilhar os seus em um look salvo.</p>
+      <a href="#/create" class="btn btn-primary mt-4">Criar um look</a></div>`;
+    return;
+  }
+  list.innerHTML = feedState.items.map(feedCardHtml).join('')
+    + (feedState.more ? '<button id="feed-more" class="btn btn-soft w-full">Carregar mais</button>' : '');
+  $$('[data-like]', list).forEach((b) => (b.onclick = () => toggleFeedLike(b.dataset.like)));
+  $$('[data-block]', list).forEach((b) => (b.onclick = () => blockFeedOwner(b.dataset.block)));
+  $$('[data-report]', list).forEach((b) => (b.onclick = () => reportFeedLook(b.dataset.report)));
+  const more = $('#feed-more');
+  if (more) more.onclick = () => loadFeedPage(feedState.items.length);
+}
+
+function feedCardHtml(l) {
+  const who = l.owner_handle ? `@${esc(l.owner_handle)}` : esc(l.owner_name || 'Alguém');
+  const initial = esc((l.owner_name || l.owner_handle || '?').slice(0, 1).toUpperCase());
+  return `<article class="rounded-[2rem] bg-white p-4 shadow-sm ring-1 ring-stone-100">
+    <div class="flex items-center gap-3">
+      <div class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-stone-200 text-sm font-medium text-stone-600">${l.owner_avatar ? `<img src="${esc(l.owner_avatar)}" alt="" class="h-full w-full object-cover">` : initial}</div>
+      <div class="min-w-0 flex-1"><p class="truncate text-sm font-medium">${who}</p>${l.occasion ? `<p class="truncate text-xs text-stone-500">${esc(l.occasion)}</p>` : ''}</div>
+    </div>
+    <div class="mt-3">${miniCollage(l.items || [])}</div>
+    <h3 class="mt-3 font-display text-lg leading-snug">${esc(l.title)}</h3>
+    <div class="mt-3 flex items-center justify-between gap-2">
+      <button data-like="${esc(l.id)}" aria-pressed="${!!l.liked}" class="btn ${l.liked ? 'btn-primary' : 'btn-soft'} !py-2 text-sm">${icon('heart', 'h-4 w-4')} ${Number(l.likes) || 0}</button>
+      <div class="flex items-center gap-1 text-xs">
+        <button data-block="${esc(l.id)}" class="rounded-full px-3 py-2 text-stone-500 hover:bg-stone-100">Bloquear</button>
+        <button data-report="${esc(l.id)}" class="rounded-full px-3 py-2 text-stone-500 hover:bg-stone-100">Denunciar</button>
+      </div>
+    </div>
+  </article>`;
+}
+
+async function toggleFeedLike(id) {
+  const l = feedState.items.find((x) => x.id === id);
+  if (!l) return;
+  const want = !l.liked;
+  l.liked = want; l.likes += want ? 1 : -1; paintFeed();
+  const { data, error } = await sb.rpc('toggle_like', { p_outfit: id, p_like: want });
+  if (error) {
+    l.liked = !want; l.likes += want ? -1 : 1; paintFeed();
+    return toast(errMsg(error), 'error');
+  }
+  l.likes = data.likes; l.liked = data.liked; paintFeed();
+}
+
+async function blockFeedOwner(id) {
+  const l = feedState.items.find((x) => x.id === id);
+  const who = l?.owner_handle ? `@${l.owner_handle}` : 'esta pessoa';
+  if (!(await confirmDialog(`Você não verá mais os looks de ${who}, e ${who} não verá os seus. Você pode desbloquear em Perfil > Pessoas.`, { confirmLabel: 'Bloquear', danger: true, title: 'Bloquear pessoa?' }))) return;
+  const { error } = await sb.rpc('block_feed_owner', { p_outfit: id });
+  if (error) return toast(errMsg(error), 'error');
+  toast('Pessoa bloqueada', 'ok');
+  renderFeed();
+}
+
+async function reportFeedLook(id) {
+  if (!(await confirmDialog('Este look vai sumir do seu feed. A equipe do app pode analisar a denúncia.', { confirmLabel: 'Denunciar', danger: true, title: 'Denunciar look?' }))) return;
+  const { error } = await sb.from('outfit_reports').insert({ outfit_id: id, reason: 'Denúncia no feed' });
+  if (error && error.code !== '23505') return toast(errMsg(error), 'error');
+  feedState.items = feedState.items.filter((x) => x.id !== id);
+  paintFeed();
+  toast('Obrigado. Este look foi ocultado para você.', 'ok');
 }
 
 /* ============================================================
@@ -1951,16 +2225,24 @@ function renderProfile() {
         </div>
 
         <div class="mt-6"><label class="label" for="name">Nome</label><input id="name" class="input" maxlength="80" value="${esc(name)}"></div>
+        <div class="mt-5"><label class="label" for="handle">@apelido (para o feed)</label>
+          <input id="handle" class="input" maxlength="25" value="${esc(p.handle || '')}" placeholder="ex.: julio.look" autocapitalize="off" autocomplete="off">
+          <p class="mt-1 text-xs text-stone-500">Use letras minúsculas, números, ponto ou _. Outras pessoas encontram você por ele.</p></div>
         <div class="mt-5"><span class="label">Preferências de estilo</span>
           <div class="flex flex-wrap gap-2">${PROFILE_STYLES.map((s) => `<button data-s="${esc(s)}" aria-pressed="${sel.has(s)}" class="chip ${sel.has(s) ? 'chip-on' : ''}">${esc(s)}</button>`).join('')}</div></div>
         <button id="save" class="btn btn-primary mt-6 w-full">Salvar perfil</button>
 
+        <div class="mt-8"><span class="label">Pessoas</span>
+          <p class="mb-3 text-xs text-stone-500">Controle quem pode ver os seus looks no feed.</p>
+          <div id="people-box" class="space-y-3"><p class="text-sm text-stone-500">Carregando…</p></div></div>
         <div class="mt-8 space-y-2">
           ${canInstall ? `<button id="install" class="btn btn-soft w-full">${icon('download')} Instalar o app</button>` : ''}
           ${iosHint ? `<p class="rounded-2xl bg-stone-100 p-3 text-xs text-stone-600">Para instalar no iPhone: toque em Compartilhar e depois em “Adicionar à Tela de Início”.</p>` : ''}
+          <a href="#/sobre" class="btn btn-soft w-full">Sobre o app</a>
           <a href="#/diagnostico" class="btn btn-soft w-full">Testar a IA</a>
           <button id="chpw" class="btn btn-soft w-full">Alterar senha</button>
           <button id="out" class="btn btn-ghost w-full">Sair da conta</button>
+          <p class="pt-3 text-center text-xs text-stone-400">Smart Closet AI · versão ${esc(APP_VERSION)}</p>
         </div>
 
         <div class="mt-8 rounded-2xl border border-stone-200 p-4">
@@ -1974,13 +2256,17 @@ function renderProfile() {
     $$('[data-s]').forEach((b) => (b.onclick = () => { name = $('#name').value; toggle(sel, b.dataset.s); p.full_name = name; paint(); }));
     $$('[data-theme-pick]').forEach((b) => (b.onclick = () => { name = $('#name').value; applyTheme(b.dataset.themePick); paint(); }));
     $('#save').onclick = async () => {
+      const hv = handleValue();
+      if (hv === false) return toast('Use de 3 a 20 letras minúsculas, números, ponto ou _.', 'error');
       setBusy(true, 'Salvando…');
-      const { data, error } = await sb.from('profiles').update({ full_name: $('#name').value.trim(), style_preferences: [...sel] }).eq('id', state.user.id).select().single();
+      const { data, error } = await sb.from('profiles').update({ full_name: $('#name').value.trim(), style_preferences: [...sel], handle: hv }).eq('id', state.user.id).select().single();
       setBusy(false);
+      if (error?.code === '23505') return toast('Esse @apelido já está em uso. Escolha outro.', 'error');
       if (error) return toast(errMsg(error), 'error');
       state.profile = data; Object.assign(p, data); toast('Perfil salvo', 'ok');
     };
     $('#out').onclick = async () => { await sb.auth.signOut(); };
+    renderPeopleBox();
     const inst = $('#install');
     if (inst) inst.onclick = async () => { deferredInstall.prompt(); await deferredInstall.userChoice; deferredInstall = null; renderProfile(); };
     $('#chpw').onclick = openChangePassword;
@@ -2084,6 +2370,69 @@ async function wipeData() {
 /* ============================================================
    Limpeza de dados antigos (foto de modelo, legado)
    ============================================================ */
+/* ============================================================
+   Sobre o app (pública, com ou sem login)
+   ============================================================ */
+function renderAbout() {
+  const back = state.session ? '#/profile' : '#/login';
+  const card = 'rounded-3xl bg-white p-5 ring-1 ring-stone-200';
+  const features = [
+    'Guarda-roupa com recorte automático das peças',
+    'Looks montados pela IA para cada ocasião e clima',
+    'Prévia do look, feita no seu aparelho',
+    'Avaliação dos looks, que ajuda a IA a entender o seu gosto',
+    'Feed para compartilhar looks com quem você escolher',
+    'Compartilhamento por cartão ou por link',
+  ];
+  view().innerHTML = `
+    <div class="fade-up">
+      <div class="flex items-center gap-2">
+        <a href="${back}" class="btn btn-ghost !p-2" aria-label="Voltar">${icon('x')}</a>
+        <h1 class="font-display text-3xl">Sobre</h1>
+      </div>
+
+      <div class="mt-8 flex flex-col items-center text-center">
+        <div class="flex h-20 w-20 items-center justify-center rounded-[1.75rem] bg-stone-900 text-white shadow-sm">${icon('closet', 'h-10 w-10')}</div>
+        <p class="mt-4 font-display text-2xl">Smart Closet AI</p>
+        <p class="mt-1 text-sm text-stone-500">Seu guarda-roupa digital com estilista de IA</p>
+        <p class="mt-2 text-xs text-stone-400">Versão ${esc(APP_VERSION)}</p>
+      </div>
+
+      <div class="mt-8 space-y-4">
+        <section class="${card}">
+          <h2 class="text-sm font-semibold">O que é</h2>
+          <p class="mt-2 text-sm leading-relaxed text-stone-600">Cadastre as peças do seu guarda-roupa, monte looks para cada ocasião e clima e receba sugestões feitas com as suas próprias roupas.</p>
+        </section>
+
+        <section class="${card}">
+          <h2 class="text-sm font-semibold">Recursos</h2>
+          <ul class="mt-3 space-y-3 text-sm text-stone-600">
+            ${features.map((f) => `<li class="flex items-start gap-3"><span class="mt-0.5 shrink-0 text-stone-900">${icon('check', 'h-4 w-4')}</span><span>${esc(f)}</span></li>`).join('')}
+          </ul>
+        </section>
+
+        <section class="${card}">
+          <h2 class="text-sm font-semibold">Privacidade</h2>
+          <p class="mt-2 text-sm leading-relaxed text-stone-600">Seus dados são seus. Você pode apagar peças, looks e a conta a qualquer momento.</p>
+          <button id="about-terms" class="btn btn-soft mt-4 w-full">Termos e Política de Privacidade</button>
+        </section>
+
+        <section class="${card}">
+          <h2 class="text-sm font-semibold">Contato e suporte</h2>
+          <p class="mt-2 text-sm text-stone-600">Dúvidas, sugestões ou problemas? Fale com a gente.</p>
+          <p class="mt-2 break-all text-sm font-medium text-stone-900">${esc(CONTACT_EMAIL)}</p>
+          <a href="mailto:${esc(CONTACT_EMAIL)}?subject=Smart%20Closet%20AI" class="btn btn-primary mt-4 w-full">Enviar e-mail</a>
+        </section>
+      </div>
+
+      <p class="mt-10 text-center text-xs leading-relaxed text-stone-400">
+        Desenvolvido por <span class="font-medium text-stone-600">Julio Gonzales</span><br>
+        © ${new Date().getFullYear()} · Todos os direitos reservados
+      </p>
+    </div>`;
+  $('#about-terms').onclick = () => openTerms();
+}
+
 function openTerms() {
   const root = openModal(`
     ${modalHeader('Termos e privacidade')}
