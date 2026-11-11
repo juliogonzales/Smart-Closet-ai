@@ -1239,8 +1239,26 @@ async function cleanCutout(maskBlob, origBlob) {
       if (!ref) continue;
       const i = p * 4;
       const d = Math.abs(orig[i] - ref[0]) + Math.abs(orig[i + 1] - ref[1]) + Math.abs(orig[i + 2] - ref[2]);
-      if (d < 90) keep[p] = 1;
+      if (d < 75) keep[p] = 1;
     }
+    // abertura (2 px): apaga pontinhos e fiapos presos à borda, sem mexer no corpo da peça
+    const morph = (src, erode) => {
+      const dst = new Uint8Array(N);
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        let v = erode ? 1 : 0;
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+          const xx = x + dx, yy = y + dy;
+          const s = (xx < 0 || yy < 0 || xx >= w || yy >= h) ? 0 : src[yy * w + xx];
+          if (erode && !s) v = 0;
+          if (!erode && s) v = 1;
+        }
+        dst[y * w + x] = v;
+      }
+      return dst;
+    };
+    let opened = keep;
+    for (let k = 0; k < 2; k++) opened = morph(morph(opened, true), false);
+    keep.set(opened);
     // suaviza só a borda (1 px) para não ficar serrilhado
     const soft = new Uint8Array(N);
     for (let p = 0; p < N; p++) {
