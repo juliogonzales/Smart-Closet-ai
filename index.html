@@ -30,8 +30,7 @@
     :root[data-theme="lavanda"] { --s50: 250 247 255; --s100: 240 234 255; --s200: 222 210 251; --s300: 194 173 249; --s400: 155 133 218; --s500: 101 90 128; --s600: 77 68 102; --s700: 58 51 80; --s800: 109 40 217; --s900: 124 58 237; }
     :root[data-theme="menta"] { --s50: 247 251 244; --s100: 235 246 228; --s200: 212 235 198; --s300: 175 220 152; --s400: 119 184 103; --s500: 78 106 70; --s600: 60 82 53; --s700: 45 63 41; --s800: 22 101 52; --s900: 21 128 61; }
   </style>
-  <style id="app-css">
-/*! tailwindcss v4.3.3 | MIT License | https://tailwindcss.com */
+  <style id="app-css">/*! tailwindcss v4.3.3 | MIT License | https://tailwindcss.com */
 @layer properties;
 @layer theme, base, components, utilities;
 @layer theme {
@@ -71,8 +70,6 @@
     --text-sm--line-height: calc(1.25 / 0.875);
     --text-base: 1rem;
     --text-base--line-height: calc(1.5 / 1);
-    --text-lg: 1.125rem;
-    --text-lg--line-height: calc(1.75 / 1.125);
     --text-xl: 1.25rem;
     --text-xl--line-height: calc(1.75 / 1.25);
     --text-2xl: 1.5rem;
@@ -292,6 +289,9 @@
   .inset-x-0 {
     inset-inline: 0px;
   }
+  .-top-1 {
+    top: calc(var(--spacing) * -1);
+  }
   .top-1\/2 {
     top: calc(1 / 2 * 100%);
   }
@@ -301,8 +301,14 @@
   .top-4 {
     top: calc(var(--spacing) * 4);
   }
+  .-right-1 {
+    right: calc(var(--spacing) * -1);
+  }
   .right-2 {
     right: calc(var(--spacing) * 2);
+  }
+  .right-3 {
+    right: calc(var(--spacing) * 3);
   }
   .bottom-0 {
     bottom: 0px;
@@ -421,11 +427,20 @@
   .mb-8 {
     margin-bottom: calc(var(--spacing) * 8);
   }
+  .-ml-1 {
+    margin-left: calc(var(--spacing) * -1);
+  }
   .ml-1 {
     margin-left: var(--spacing);
   }
   .ml-auto {
     margin-left: auto;
+  }
+  .line-clamp-2 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
   }
   .block {
     display: block;
@@ -490,11 +505,11 @@
   .h-8 {
     height: calc(var(--spacing) * 8);
   }
-  .h-9 {
-    height: calc(var(--spacing) * 9);
-  }
   .h-10 {
     height: calc(var(--spacing) * 10);
+  }
+  .h-11 {
+    height: calc(var(--spacing) * 11);
   }
   .h-12 {
     height: calc(var(--spacing) * 12);
@@ -553,11 +568,11 @@
   .w-8 {
     width: calc(var(--spacing) * 8);
   }
-  .w-9 {
-    width: calc(var(--spacing) * 9);
-  }
   .w-10 {
     width: calc(var(--spacing) * 10);
+  }
+  .w-11 {
+    width: calc(var(--spacing) * 11);
   }
   .w-12 {
     width: calc(var(--spacing) * 12);
@@ -592,6 +607,9 @@
   .min-w-0 {
     min-width: 0px;
   }
+  .min-w-\[1\.25rem\] {
+    min-width: 1.25rem;
+  }
   .flex-1 {
     flex: 1;
   }
@@ -613,6 +631,9 @@
   }
   .animate-spin {
     animation: var(--animate-spin);
+  }
+  .cursor-pointer {
+    cursor: pointer;
   }
   .touch-none {
     touch-action: none;
@@ -650,6 +671,9 @@
   .justify-center {
     justify-content: center;
   }
+  .justify-start {
+    justify-content: flex-start;
+  }
   .gap-1 {
     gap: var(--spacing);
   }
@@ -667,6 +691,11 @@
   }
   .gap-4 {
     gap: calc(var(--spacing) * 4);
+  }
+  :where(.space-y-1 > :not(:last-child)) {
+    --tw-space-y-reverse: 0;
+    margin-block-start: calc(var(--spacing) * var(--tw-space-y-reverse));
+    margin-block-end: calc(var(--spacing) * calc(1 - var(--tw-space-y-reverse)));
   }
   :where(.space-y-1\.5 > :not(:last-child)) {
     --tw-space-y-reverse: 0;
@@ -877,6 +906,9 @@
   .\!px-4 {
     padding-inline: calc(var(--spacing) * 4) !important;
   }
+  .px-1 {
+    padding-inline: var(--spacing);
+  }
   .px-1\.5 {
     padding-inline: calc(var(--spacing) * 1.5);
   }
@@ -910,9 +942,6 @@
   .py-1\.5 {
     padding-block: calc(var(--spacing) * 1.5);
   }
-  .py-2 {
-    padding-block: calc(var(--spacing) * 2);
-  }
   .py-2\.5 {
     padding-block: calc(var(--spacing) * 2.5);
   }
@@ -931,6 +960,9 @@
   .pt-3 {
     padding-top: calc(var(--spacing) * 3);
   }
+  .pt-4 {
+    padding-top: calc(var(--spacing) * 4);
+  }
   .pt-6 {
     padding-top: calc(var(--spacing) * 6);
   }
@@ -942,6 +974,9 @@
   }
   .pb-3 {
     padding-bottom: calc(var(--spacing) * 3);
+  }
+  .pb-4 {
+    padding-bottom: calc(var(--spacing) * 4);
   }
   .pb-32 {
     padding-bottom: calc(var(--spacing) * 32);
@@ -969,10 +1004,6 @@
     font-size: var(--text-3xl);
     line-height: var(--tw-leading, var(--text-3xl--line-height));
   }
-  .text-lg {
-    font-size: var(--text-lg);
-    line-height: var(--tw-leading, var(--text-lg--line-height));
-  }
   .text-sm {
     font-size: var(--text-sm);
     line-height: var(--tw-leading, var(--text-sm--line-height));
@@ -990,6 +1021,10 @@
   }
   .text-\[11px\] {
     font-size: 11px;
+  }
+  .leading-5 {
+    --tw-leading: calc(var(--spacing) * 5);
+    line-height: calc(var(--spacing) * 5);
   }
   .leading-relaxed {
     --tw-leading: var(--leading-relaxed);
@@ -1168,6 +1203,9 @@
     margin-top: calc(var(--spacing) * 5);
   }
   @media (hover: hover) {
+    .hover\:bg-stone-50:hover {
+      background-color: var(--color-stone-50);
+    }
     .hover\:bg-stone-100:hover {
       background-color: var(--color-stone-100);
     }
@@ -1683,8 +1721,7 @@
     }
   }
 }
-
-  </style>
+</style>
   <style>
     html, body { background: rgb(var(--s50)); }
     /* Tamanho dos ícones sem depender do Tailwind: evita ícones gigantes se o CSS demorar ou falhar. */
@@ -1741,6 +1778,11 @@
   <nav id="bottomnav" class="safe-bottom fixed inset-x-0 bottom-0 z-30 hidden border-t border-stone-200 bg-white/95 backdrop-blur" aria-label="Navegação principal"></nav>
 
   <!-- Rodapé de autoria -->
+
+  <button id="bell" type="button" class="fixed right-3 z-30 hidden h-11 w-11 items-center justify-center rounded-full bg-white text-stone-700 shadow-md ring-1 ring-stone-200" style="top:calc(env(safe-area-inset-top, 0px) + 0.75rem)" aria-label="Notificações" title="Notificações">
+    <span id="bell-icon" class="flex"></span>
+    <span id="bell-badge" class="absolute -right-1 -top-1 hidden min-w-[1.25rem] rounded-full bg-red-600 px-1 text-center text-[11px] font-semibold leading-5 text-white"></span>
+  </button>
 
   <div id="modal-root"></div>
   <div id="busy" class="fixed inset-0 z-50 hidden items-center justify-center bg-stone-900/40 backdrop-blur-sm" role="status" aria-live="polite">
