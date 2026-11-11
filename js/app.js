@@ -2002,13 +2002,54 @@ function openFeedMenu(id) {
   const l = feedState.items.find((x) => x.id === id);
   if (!l) return;
   const who = l.owner_handle ? `@${l.owner_handle}` : 'esta pessoa';
-  const root = openModal(`${modalHeader('Opções do look')}
-    <div class="space-y-2">
-      <button data-act="block" class="btn btn-soft w-full justify-start">${icon('x')} Bloquear ${esc(who)}</button>
-      <button data-act="report" class="btn btn-soft w-full justify-start">${icon('flag')} Denunciar este look</button>
-    </div>`);
-  $('[data-act="block"]', root).onclick = () => { closeModal(); blockFeedOwner(id); };
-  $('[data-act="report"]', root).onclick = () => { closeModal(); reportFeedLook(id); };
+  const mine = state.outfits.some((x) => x.id === id);
+  const actions = mine
+    ? `<button data-act="unshare" class="btn btn-soft w-full justify-start">${icon('users')} Tirar do feed</button>
+       <button data-act="delete" class="btn btn-soft w-full justify-start text-red-700">${icon('trash')} Apagar este look</button>`
+    : `<button data-act="block" class="btn btn-soft w-full justify-start">${icon('x')} Bloquear ${esc(who)}</button>
+       <button data-act="report" class="btn btn-soft w-full justify-start">${icon('flag')} Denunciar este look</button>`;
+  const root = openModal(`${modalHeader(mine ? 'Seu look' : 'Opções do look')}
+    <div class="space-y-2">${actions}</div>`);
+  const on = (act, fn) => { const b = $(`[data-act="${act}"]`, root); if (b) b.onclick = () => { closeModal(); fn(id); }; };
+  on('block', blockFeedOwner);
+  on('report', reportFeedLook);
+  on('unshare', unshareOutfit);
+  on('delete', deleteOwnOutfit);
+}
+
+/* --- Ações sobre os próprios looks (feed e perfil) --- */
+async function unshareOutfit(id) {
+  const { error } = await sb.from('outfits').update({ feed_visibility: 'off' }).eq('id', id);
+  if (error) return toast(errMsg(error), 'error');
+  const o = state.outfits.find((x) => x.id === id);
+  if (o) o.feed_visibility = 'off';
+  toast('Look tirado do feed', 'ok');
+  route();
+}
+
+async function deleteOwnOutfit(id) {
+  const o = state.outfits.find((x) => x.id === id);
+  const t = o?.title ? `«${o.title}»` : 'este look';
+  if (!(await confirmDialog(`Apagar ${t} para sempre? Ele some do feed e dos seus favoritos, e o link público deixa de funcionar. Não dá para desfazer.`, { confirmLabel: 'Apagar', danger: true, title: 'Apagar look?' }))) return;
+  const { error } = await sb.from('outfits').delete().eq('id', id);
+  if (error) return toast(errMsg(error), 'error');
+  state.outfits = state.outfits.filter((x) => x.id !== id);
+  if (state.gen.result?.saved_id === id) state.gen.result.saved_id = null;
+  toast('Look apagado', 'ok');
+  route();
+}
+
+function mySharedHtml() {
+  const mine = state.outfits.filter((o) => o.feed_visibility && o.feed_visibility !== 'off');
+  if (!mine.length) return '<p class="rounded-2xl bg-stone-50 p-3 text-xs text-stone-500">Nenhum look publicado no feed.</p>';
+  return mine.map((o) => `<div class="flex items-center gap-2 rounded-2xl bg-white p-3 ring-1 ring-stone-200">
+      <div class="min-w-0 flex-1">
+        <p class="truncate text-sm font-medium">${esc(o.title || 'Look')}</p>
+        <p class="text-xs text-stone-500">${o.feed_visibility === 'everyone' ? 'Visível para todos' : 'Só pessoas selecionadas'}</p>
+      </div>
+      <button data-unshare="${esc(o.id)}" class="btn btn-soft !py-1.5 text-xs">Tirar do feed</button>
+      <button data-delete-look="${esc(o.id)}" aria-label="Apagar look" class="btn btn-ghost !p-2 text-red-700">${icon('trash', 'h-4 w-4')}</button>
+    </div>`).join('');
 }
 
 async function toggleFeedLike(id) {
@@ -2411,6 +2452,10 @@ function renderProfile() {
         <div class="mt-8"><span class="label">Pessoas</span>
           <p class="mb-3 text-xs text-stone-500">Controle quem pode ver os seus looks no feed.</p>
           <div id="people-box" class="space-y-3"><p class="text-sm text-stone-500">Carregando…</p></div></div>
+
+        <div class="mt-8"><span class="label">Minhas publicações</span>
+          <p class="mb-3 text-xs text-stone-500">Looks que você mostra no feed. Você pode tirá-los do feed ou apagá-los.</p>
+          <div class="space-y-2">${mySharedHtml()}</div></div>
         <div class="mt-8 space-y-2">
           ${canInstall ? `<button id="install" class="btn btn-soft w-full">${icon('download')} Instalar o app</button>` : ''}
           ${iosHint ? `<p class="rounded-2xl bg-stone-100 p-3 text-xs text-stone-600">Para instalar no iPhone: toque em Compartilhar e depois em “Adicionar à Tela de Início”.</p>` : ''}
@@ -2430,6 +2475,8 @@ function renderProfile() {
         </div>
       </div>`;
     $$('[data-s]').forEach((b) => (b.onclick = () => { name = $('#name').value; toggle(sel, b.dataset.s); p.full_name = name; paint(); }));
+    $$('[data-unshare]').forEach((b) => (b.onclick = () => unshareOutfit(b.dataset.unshare)));
+    $$('[data-delete-look]').forEach((b) => (b.onclick = () => deleteOwnOutfit(b.dataset.deleteLook)));
     $$('[data-theme-pick]').forEach((b) => (b.onclick = () => { name = $('#name').value; applyTheme(b.dataset.themePick); paint(); }));
     $('#save').onclick = async () => {
       const hv = handleValue();
