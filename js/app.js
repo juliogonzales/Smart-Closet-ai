@@ -1350,6 +1350,10 @@ async function removeBackground(blob) {
   }
   try { out = await cleanCutout(out, blob); }
   catch (e) { console.warn('limpeza do recorte falhou; usando o recorte original', e); }
+  try {
+    setBusyText('Separando a peça da pessoa…');
+    out = await keepGarmentOnly(out, blob);
+  } catch (e) { console.warn('separação da peça indisponível; mantendo o recorte', e); }
   let cropped = await autocrop(out);
   if (cropped.opaque < 0.03 && method === 'ia' && await hasPlainBackground(blob)) {
     // IA apagou quase tudo num fundo liso: tenta o modo simples antes de desistir
@@ -1360,6 +1364,87 @@ async function removeBackground(blob) {
     throw new Error('Não consegui separar a peça do fundo nesta foto. Salve sem remover o fundo ou tire outra foto com a peça bem visível.');
   }
   return { blob: cropped.blob, method };
+}
+
+/* --- Separar a peça quando ela está vestida numa pessoa ---
+   Modelo de segmentação de roupas (roda no navegador, grátis). Se houver uma pessoa,
+   mantém só a peça principal: camiseta/blusa > vestido > calça > saia > calçado > acessórios. */
+const GARMENT_PRIORITY = ['Upper-clothes', 'Dress', 'Pants', 'Skirt', 'Left-shoe', 'Hat', 'Bag', 'Scarf', 'Belt'];
+const BODY_LABELS = ['Hair', 'Face', 'Left-arm', 'Right-arm', 'Left-leg', 'Right-leg'];
+let segmenterPromise = null;
+
+function getSegmenter() {
+  if (!segmenterPromise) {
+    segmenterPromise = import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.6.1/+esm')
+      .then((m) => m.pipeline('image-segmentation', 'Xenova/segformer_b2_clothes'))
+      .catch((e) => { segmenterPromise = null; throw e; });
+  }
+  return segmenterPromise;
+}
+
+const maskArea = (m) => {
+  const ch = m.channels || 1; let n = 0;
+  for (let i = 0; i < m.width * m.height; i++) if (m.data[i * ch] > 127) n++;
+  return n / (m.width * m.height);
+};
+
+// Escolhe as máscaras da peça principal. Devolve null se não houver pessoa vestindo roupa.
+function pickGarment(results) {
+  const byLabel = {};
+  for (const r of results) byLabel[r.label] = r.mask;
+  const has = (l) => byLabel[l] && maskArea(byLabel[l]) > 0.01;
+  if (!BODY_LABELS.some(has)) return null;
+  const main = GARMENT_PRIORITY.find(has);
+  if (!main) return null;
+  const masks = main.endsWith('shoe')
+    ? ['Left-shoe', 'Right-shoe'].filter(has).map((l) => byLabel[l])
+    : [byLabel[main]];
+  return { label: main, masks };
+}
+
+// Aplica a união das máscaras sobre o recorte: o que não é peça fica transparente.
+async function applyGarmentMasks(cutoutBlob, masks) {
+  const url = URL.createObjectURL(cutoutBlob);
+  try {
+    const img = await loadImg(url, false);
+    const w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+    const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+    const g = cv.getContext('2d', { willReadFrequently: true });
+    g.drawImage(img, 0, 0);
+    const im = g.getImageData(0, 0, w, h); const px = im.data;
+    const union = new Uint8Array(w * h);
+    for (const m of masks) {
+      const ch = m.channels || 1;
+      const mc = document.createElement('canvas'); mc.width = m.width; mc.height = m.height;
+      const mg = mc.getContext('2d', { willReadFrequently: true });
+      const md = mg.createImageData(m.width, m.height);
+      for (let i = 0; i < m.width * m.height; i++) {
+        const v = m.data[i * ch];
+        md.data[i * 4] = md.data[i * 4 + 1] = md.data[i * 4 + 2] = v; md.data[i * 4 + 3] = 255;
+      }
+      mg.putImageData(md, 0, 0);
+      const sc = document.createElement('canvas'); sc.width = w; sc.height = h;
+      const sg = sc.getContext('2d', { willReadFrequently: true });
+      sg.drawImage(mc, 0, 0, w, h);
+      const sd = sg.getImageData(0, 0, w, h).data;
+      for (let p = 0; p < w * h; p++) if (sd[p * 4] > union[p]) union[p] = sd[p * 4];
+    }
+    for (let p = 0; p < w * h; p++) px[p * 4 + 3] = Math.min(px[p * 4 + 3], union[p]);
+    g.putImageData(im, 0, 0);
+    return await canvasToBlob(cv, 'image/png');
+  } finally { URL.revokeObjectURL(url); }
+}
+
+// Recorte final: roda o modelo na foto ORIGINAL (precisa ver a pessoa) e corta o recorte pela peça.
+async function keepGarmentOnly(cutoutBlob, originalBlob) {
+  const url = URL.createObjectURL(originalBlob);
+  try {
+    const segment = await getSegmenter();
+    const results = await segment(url);
+    const picked = pickGarment(results);
+    if (!picked || !picked.masks.length) return cutoutBlob;
+    return await applyGarmentMasks(cutoutBlob, picked.masks);
+  } finally { URL.revokeObjectURL(url); }
 }
 
 async function blobToBase64Jpeg(blob, max = 768) {
