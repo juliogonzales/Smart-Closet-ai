@@ -1528,12 +1528,12 @@ const maskArea = (m) => {
   return n / (m.width * m.height);
 };
 
-// Escolhe as máscaras da peça principal. Devolve null se não houver pessoa vestindo roupa.
+// Escolhe as máscaras da peça principal, com ou sem pessoa (foto de produto também funciona).
+// Devolve null só se o modelo não achar nenhuma peça.
 function pickGarment(results) {
   const byLabel = {};
   for (const r of results) byLabel[r.label] = r.mask;
   const has = (l) => byLabel[l] && maskArea(byLabel[l]) > 0.01;
-  if (!BODY_LABELS.some(has)) return null;
   const main = GARMENT_PRIORITY.find(has);
   if (!main) return null;
   const masks = main.endsWith('shoe')
