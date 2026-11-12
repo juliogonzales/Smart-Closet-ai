@@ -251,6 +251,7 @@ const ICONS = {
   closet: P('M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z'),
   sparkles: P('M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z'),
   user: P('M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z'),
+  shield: P('M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z'),
   plus: P('M12 4.5v15m7.5-7.5h-15'),
   users: P('M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z'),
   thumb: P('M6.633 10.25c.806 0 1.533-.446 2.031-1.08a9.041 9.041 0 012.861-2.4c.723-.384 1.35-.956 1.653-1.715a4.498 4.498 0 00.322-1.672V3a.75.75 0 01.75-.75A2.25 2.25 0 0116.5 4.5c0 1.152-.26 2.243-.723 3.218-.266.558.107 1.282.725 1.282h3.126c1.026 0 1.945.694 2.054 1.715.045.422.068.85.068 1.285a11.95 11.95 0 01-2.649 7.521c-.388.482-.987.729-1.605.729H13.48c-.483 0-.964-.078-1.423-.23l-3.114-1.04a4.501 4.501 0 00-1.423-.23H5.904M14.25 9h2.25M5.904 18.5c.083.205.173.405.27.602.197.4-.078.898-.523.898h-.908c-.889 0-1.713-.518-1.972-1.368a12 12 0 01-.521-3.507c0-1.553.295-3.036.831-4.398C3.387 10.203 4.167 9.75 5 9.75h1.053c.472 0 .745.556.5.96a8.958 8.958 0 00-1.302 4.665c0 1.194.232 2.333.654 3.375z'),
@@ -480,13 +481,24 @@ const NAV = [
   { id: 'create', label: 'Criar look', icon: 'sparkles' },
   { id: 'profile', label: 'Perfil', icon: 'user' },
 ];
+// Item extra do menu, só para o administrador (o banco confere; aqui é só a exibição)
+const ADMIN_NAV = { id: 'admin', label: 'Admin', icon: 'shield' };
+let adminFlag = null; // null = ainda não consultado nesta sessão
+async function loadAdminFlag() {
+  if (adminFlag !== null || !state.session) return;
+  try {
+    const { data, error } = await sb.rpc('is_app_admin');
+    if (!error) adminFlag = !!data; // se falhar, tenta de novo na próxima tela
+  } catch { /* tenta de novo na próxima tela */ }
+}
 function renderNav(active) {
   const nav = $('#bottomnav');
   updateBell(!!active);
   if (!active) { nav.classList.add('hidden'); return; }
   nav.classList.remove('hidden');
-  nav.innerHTML = `<div class="mx-auto grid max-w-xl" style="grid-template-columns:repeat(${NAV.length},minmax(0,1fr))">
-    ${NAV.map((n) => `
+  const items = adminFlag ? [...NAV, ADMIN_NAV] : NAV;
+  nav.innerHTML = `<div class="mx-auto grid max-w-xl" style="grid-template-columns:repeat(${items.length},minmax(0,1fr))">
+    ${items.map((n) => `
       <a href="#/${n.id}" class="flex flex-col items-center gap-1 py-2.5 text-[11px] ${n.id === active ? 'font-semibold text-stone-900' : 'text-stone-500'}" ${n.id === active ? 'aria-current="page"' : ''}>
         ${icon(n.icon, 'h-6 w-6')}<span>${n.label}</span>
       </a>`).join('')}
@@ -519,6 +531,7 @@ async function route() {
   if (name === 'sobre') { renderNav(state.session ? 'profile' : null); return renderAbout(); }
 
   if (!state.session) {
+    adminFlag = null;
     renderNav(null);
     if (name === 'register') return renderRegister();
     if (name === 'reset') return renderReset();
@@ -539,13 +552,16 @@ async function route() {
 
   if (!state.profile?.onboarded && name !== 'onboarding') return go('#/onboarding');
 
+  await loadAdminFlag();
+  if (my !== routeSeq) return;
+
   switch (name) {
     case 'onboarding': renderNav(null); return renderOnboarding();
     case 'closet': renderNav('closet'); return arg === 'new' ? renderNewItem() : renderCloset();
     case 'create': renderNav('create'); return renderCreate();
     case 'feed': renderNav('feed'); return renderFeed();
     case 'profile': renderNav('profile'); return renderProfile();
-    case 'admin': renderNav('profile'); return renderAdmin();
+    case 'admin': renderNav('admin'); return renderAdmin();
     case 'outfit': renderNav('home'); return renderOutfitDetail(arg);
     case 'home': renderNav('home'); return renderHome();
     default: return go('#/home');
