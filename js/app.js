@@ -498,6 +498,7 @@ const TITLES = {
   home: 'Início', closet: 'Guarda-roupa', create: 'Criar look', profile: 'Perfil',
   login: 'Entrar', register: 'Criar conta', reset: 'Redefinir senha', outfit: 'Look',
   feed: 'Feed', sobre: 'Sobre o app', share: 'Look compartilhado', diagnostico: 'Testar a IA', onboarding: 'Bem-vinda(o)',
+  admin: 'Administração',
 };
 
 /* ============================================================
@@ -544,6 +545,7 @@ async function route() {
     case 'create': renderNav('create'); return renderCreate();
     case 'feed': renderNav('feed'); return renderFeed();
     case 'profile': renderNav('profile'); return renderProfile();
+    case 'admin': renderNav('profile'); return renderAdmin();
     case 'outfit': renderNav('home'); return renderOutfitDetail(arg);
     case 'home': renderNav('home'); return renderHome();
     default: return go('#/home');
@@ -2863,6 +2865,124 @@ function renderShareMissing(error) {
 }
 
 /* ============================================================
+   Painel do administrador
+   Só o dono aparece aqui: o banco confere cada chamada (is_app_admin).
+   ============================================================ */
+function adminDenied() {
+  renderNav('profile');
+  view().innerHTML = `
+    <div class="card mt-10 p-6">
+      <h1 class="font-display text-2xl">Acesso restrito</h1>
+      <p class="mt-3 text-sm text-stone-600">Esta página é só para o administrador do app.</p>
+      <a href="#/profile" class="btn btn-soft mt-5">Voltar ao perfil</a>
+    </div>`;
+}
+
+async function renderAdmin() {
+  view().innerHTML = `<div class="mt-24 text-center text-sm text-stone-500">Carregando painel…</div>`;
+  const { data: isAdmin, error: adminErr } = await sb.rpc('is_app_admin');
+  if (adminErr || !isAdmin) return adminDenied();
+  const [ov, us, rp] = await Promise.all([
+    sb.rpc('admin_overview'),
+    sb.rpc('admin_users', { p_limit: 100 }),
+    sb.rpc('admin_reports'),
+  ]);
+  const err = ov.error || us.error || rp.error;
+  if (err) {
+    view().innerHTML = `
+      <div class="card mt-10 p-6">
+        <h1 class="font-display text-2xl">Não consegui carregar</h1>
+        <p class="mt-3 text-sm text-stone-600">${esc(errMsg(err))}</p>
+        <a href="#/profile" class="btn btn-soft mt-5">Voltar ao perfil</a>
+      </div>`;
+    return;
+  }
+  paintAdmin(ov.data || {}, us.data || [], rp.data || []);
+}
+
+function paintAdmin(s, users, reports) {
+  const card = (label, value, sub) => `
+    <div class="rounded-2xl border border-stone-200 p-3">
+      <p class="text-xs text-stone-500">${esc(label)}</p>
+      <p class="mt-1 font-display text-2xl">${esc(String(value ?? 0))}</p>
+      ${sub ? `<p class="text-[11px] text-stone-500">${esc(sub)}</p>` : ''}
+    </div>`;
+  const when = (iso) => (iso ? new Date(iso).toLocaleDateString('pt-BR') : '');
+
+  const reportsHtml = reports.length
+    ? reports.map((r) => `
+      <div class="rounded-2xl border border-stone-200 p-3">
+        <div class="flex items-start justify-between gap-2">
+          <div class="min-w-0">
+            <p class="truncate text-sm font-medium">${esc(r.title || 'Sem título')}</p>
+            <p class="text-xs text-stone-500">@${esc(r.owner_handle || 'sem-apelido')} · ${esc(String(r.reports))} denúncia(s) · ${esc(when(r.last_report))}</p>
+          </div>
+          ${r.admin_hidden ? '<span class="shrink-0 rounded-full bg-red-100 px-2 py-0.5 text-[11px] text-red-700">oculto</span>' : ''}
+        </div>
+        ${(r.reasons || []).length ? `<ul class="mt-2 space-y-1 text-xs text-stone-600">${r.reasons.map((x) => `<li>• ${esc(x)}</li>`).join('')}</ul>` : ''}
+        <div class="mt-3 grid grid-cols-2 gap-2">
+          ${r.admin_hidden
+            ? `<button class="btn btn-soft" data-adm-hide="${esc(r.id)}" data-val="false">Reexibir</button>`
+            : `<button class="btn btn-primary" data-adm-hide="${esc(r.id)}" data-val="true">Ocultar do feed</button>`}
+          <button class="btn btn-soft" data-adm-clear="${esc(r.id)}">Limpar denúncias</button>
+        </div>
+      </div>`).join('')
+    : '<p class="text-sm text-stone-500">Nenhuma denúncia no momento.</p>';
+
+  const usersHtml = users.length
+    ? users.map((u) => `
+      <div class="flex items-center justify-between gap-2 border-b border-stone-100 py-2 text-sm">
+        <div class="min-w-0">
+          <p class="truncate">${esc(u.full_name || 'Sem nome')} <span class="text-stone-500">${u.handle ? '@' + esc(u.handle) : ''}</span></p>
+          <p class="text-xs text-stone-500">entrou em ${esc(when(u.created_at))}</p>
+        </div>
+        <p class="shrink-0 text-right text-xs text-stone-600">${esc(String(u.clothes))} peças<br>${esc(String(u.looks))} looks · ${esc(String(u.shared))} no feed</p>
+      </div>`).join('')
+    : '<p class="text-sm text-stone-500">Nenhum usuário.</p>';
+
+  view().innerHTML = `
+    <div class="fade-up">
+      <a href="#/profile" class="text-sm text-stone-500 underline-offset-2 hover:underline">← Voltar ao perfil</a>
+      <h1 class="mt-2 font-display text-3xl">Administração</h1>
+      <p class="mt-1 text-xs text-stone-500">Só você vê esta página. Nenhum e-mail aparece aqui.</p>
+
+      <div class="mt-5 grid grid-cols-2 gap-2">
+        ${card('Usuários', s.users, `+${s.users_week ?? 0} nos últimos 7 dias`)}
+        ${card('Looks', s.looks, `${s.shared ?? 0} no feed · ${s.hidden ?? 0} ocultos`)}
+        ${card('Peças', s.clothes)}
+        ${card('Curtidas', s.likes)}
+        ${card('Denúncias', s.reported_looks, 'looks denunciados')}
+        ${card('Avisos no celular', s.push_devices, 'aparelhos inscritos')}
+        ${card('Uso da IA', s.ai_today, `hoje · ${s.ai_week ?? 0} em 7 dias`)}
+      </div>
+
+      <h2 class="mt-8 text-sm font-semibold">Denúncias</h2>
+      <div class="mt-2 space-y-2">${reportsHtml}</div>
+
+      <h2 class="mt-8 text-sm font-semibold">Usuários (mais recentes)</h2>
+      <div class="mt-2">${usersHtml}</div>
+    </div>`;
+
+  $$('[data-adm-hide]').forEach((b) => (b.onclick = async () => {
+    const hide = b.dataset.val === 'true';
+    setBusy(true, 'Salvando…');
+    const { error } = await sb.rpc('admin_set_hidden', { p_outfit: b.dataset.admHide, p_hidden: hide });
+    setBusy(false);
+    if (error) return toast(errMsg(error), 'error');
+    toast(hide ? 'Look oculto do feed' : 'Look reexibido', 'ok');
+    renderAdmin();
+  }));
+  $$('[data-adm-clear]').forEach((b) => (b.onclick = async () => {
+    setBusy(true, 'Salvando…');
+    const { error } = await sb.rpc('admin_clear_reports', { p_outfit: b.dataset.admClear });
+    setBusy(false);
+    if (error) return toast(errMsg(error), 'error');
+    toast('Denúncias limpas', 'ok');
+    renderAdmin();
+  }));
+}
+
+/* ============================================================
    Perfil
    ============================================================ */
 let deferredInstall = null;
@@ -2948,6 +3068,7 @@ function renderProfile() {
           <div class="space-y-2">${mySharedHtml()}</div></div>
         <div class="mt-8 space-y-2">
           ${installBlockHtml()}
+          <div id="admin-slot"></div>
           <a href="#/sobre" class="btn btn-soft w-full">Sobre o app</a>
           <a href="#/diagnostico" class="btn btn-soft w-full">Testar a IA</a>
           <button id="chpw" class="btn btn-soft w-full">Alterar senha</button>
@@ -2989,6 +3110,12 @@ function renderProfile() {
     const pf = $('#push-off');
     if (pf) pf.onclick = async () => { await disablePush(); renderProfile(); };
     $('#chpw').onclick = openChangePassword;
+    // Atalho do painel: aparece só para o administrador (o banco confere)
+    (async () => {
+      const { data: isAdmin } = await sb.rpc('is_app_admin');
+      const slot = $('#admin-slot');
+      if (isAdmin && slot) slot.innerHTML = `<a href="#/admin" class="btn btn-soft w-full">Painel do administrador</a>`;
+    })().catch(() => {});
     $('#wipe').onclick = wipeData;
     $('#delacc').onclick = deleteAccount;
     $('#avatar').onclick = () => $('#avatar-file').click();

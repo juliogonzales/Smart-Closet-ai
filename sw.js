@@ -1,7 +1,7 @@
 // Service worker simples: network-first para arquivos do próprio app,
 // com fallback para o cache quando offline. Não intercepta Supabase/CDNs.
 // Também mostra os avisos de curtida (Web Push) com o app fechado.
-const CACHE = 'smart-closet-v30';
+const CACHE = 'smart-closet-v31';
 const SHELL = [
   './',
   './index.html',
