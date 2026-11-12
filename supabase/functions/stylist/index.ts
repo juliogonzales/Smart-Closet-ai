@@ -43,7 +43,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 function friendlyAiError(provider: string, status: number, body: string) {
   console.error(`${provider} ${status}: ${body.slice(0, 400)}`);
   if (status === 429) {
-    return new HttpError(429, 'A IA está com muita demanda agora. Tente de novo em instantes.');
+    return new HttpError(429, 'A IA está ocupada agora (muitas pessoas usando ao mesmo tempo). Espere cerca de 1 minuto e toque em gerar de novo.');
   }
   if (status === 401 || status === 403 || /API key not valid|API_KEY_INVALID/i.test(body)) {
     return new HttpError(502, 'A chave da IA foi recusada. Confira o secret da chave nas Edge Functions.');
@@ -159,6 +159,8 @@ function parseJSON(raw: string) {
 }
 
 // ------------------------------------------------------------- limite ----
+// Conta a tentativa ANTES da IA (para barrar toques repetidos), mas DEVOLVE a
+// tentativa se a IA falhar. Assim só look gerado com sucesso consome o limite.
 // deno-lint-ignore no-explicit-any
 async function useQuota(supabase: any, userId: string) {
   const limit = Number(Deno.env.get('STYLIST_DAILY_LIMIT') ?? '40');
@@ -171,7 +173,7 @@ async function useQuota(supabase: any, userId: string) {
   if (error) {
     // Tabela ainda não criada: não bloqueia o app, só avisa no log.
     console.warn('ai_usage indisponível:', error.message);
-    return { used: 0, limit };
+    return { info: { used: 0, limit }, refund: async () => {} };
   }
   if ((count ?? 0) >= limit) {
     throw new HttpError(
@@ -179,8 +181,32 @@ async function useQuota(supabase: any, userId: string) {
       `Você usou os ${limit} looks de IA das últimas 24 horas. Volte mais tarde!`,
     );
   }
-  await supabase.from('ai_usage').insert({ user_id: userId, kind: 'stylist' });
-  return { used: (count ?? 0) + 1, limit };
+  // Pausa mínima entre gerações: evita rajadas que só geram "IA ocupada".
+  const { data: last } = await supabase
+    .from('ai_usage')
+    .select('created_at')
+    .eq('kind', 'stylist')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (last?.created_at && Date.now() - Date.parse(last.created_at) < 15000) {
+    throw new HttpError(429, 'Espere uns 15 segundos antes de gerar outro look.');
+  }
+  const { data: row } = await supabase
+    .from('ai_usage')
+    .insert({ user_id: userId, kind: 'stylist' })
+    .select('id')
+    .maybeSingle();
+  const refund = async () => {
+    if (!row?.id) return;
+    // A tabela só permite ao usuário inserir e ler; o estorno usa a chave de serviço no servidor.
+    const admin = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    );
+    await admin.from('ai_usage').delete().eq('id', row.id).eq('user_id', userId);
+  };
+  return { info: { used: (count ?? 0) + 1, limit }, refund };
 }
 
 // ------------------------------------------------------------- handler ----
@@ -227,11 +253,36 @@ Deno.serve(async (req) => {
       ? profile!.style_preferences : [];
 
     const quota = await useQuota(supabase, u.user.id);
+    let result: any;
 
     const wardrobe = clothes.map((c: Record<string, unknown>) => ({
       id: c.id, categoria: c.category, nome: c.name || undefined,
       cores: c.colors, tags: c.tags,
     }));
+    // Gosto observado: avaliações da própria pessoa (gostei, não gostei, vou usar).
+    // Se a consulta falhar, a IA segue sem essa informação.
+    const { data: fbRows } = await supabase
+      .from('outfit_feedback')
+      .select('rating, will_wear, outfits(items, occasion)')
+      .order('updated_at', { ascending: false })
+      .limit(30);
+    // deno-lint-ignore no-explicit-any
+    const describeLook = (row: any): string | null => {
+      const names = (row?.outfits?.items || [])
+        .map((id: string) => byId.get(id))
+        .filter(Boolean)
+        // deno-lint-ignore no-explicit-any
+        .map((c: any) => `${c.name || c.category}${Array.isArray(c.colors) && c.colors.length ? ` (${c.colors.join('/')})` : ''}`);
+      return names.length ? `${row.outfits?.occasion || 'sem ocasião'}: ${names.join(', ')}` : null;
+    };
+    // deno-lint-ignore no-explicit-any
+    const rows: any[] = Array.isArray(fbRows) ? fbRows : [];
+    const liked = rows.filter((r) => r.rating === 1 || r.will_wear === true).map(describeLook).filter(Boolean).slice(0, 6);
+    const disliked = rows.filter((r) => r.rating === -1).map(describeLook).filter(Boolean).slice(0, 6);
+    const tasteBlock = liked.length || disliked.length
+      ? `\nGOSTO OBSERVADO (avaliações anteriores desta pessoa):\n${liked.length ? `- Gostou ou vai usar: ${liked.join(' || ')}\n` : ''}${disliked.length ? `- Não gostou: ${disliked.join(' || ')}\n` : ''}Use isso como referência de estilo e não repita combinações que ela não gostou.\n`
+      : '';
+
     const today = new Date().toLocaleDateString('pt-BR', {
       timeZone: 'America/Sao_Paulo', weekday: 'long', day: 'numeric', month: 'long',
     });
@@ -244,11 +295,11 @@ CONTEXTO
 - Clima: ${weather}
 - Estilo desejado agora: ${style || 'livre'}
 - Preferências gerais da pessoa: ${prefs.length ? prefs.join(', ') : 'não informadas'}
-
+${tasteBlock}
 REGRAS
 1. Use apenas ids que existem na lista. Nunca invente ids.
-2. Estrutura: (top + bottom) OU fullbody. Inclua shoes se houver. outerwear só se o clima pedir (frio/chuva) ou combinar com a ocasião. accessory: 0 a 2 peças.
-3. No máximo 1 peça por categoria, exceto accessory.
+2. Estrutura: (top + bottom) OU fullbody. Inclua shoes se houver. outerwear só se o clima pedir (frio/chuva) ou combinar com a ocasião. Acessórios (bag, jewelry, headwear, accessory): 0 a 2 peças no total. activewear (esporte) e swimwear (praia) só se a ocasião pedir treino ou praia; nunca misture com terno ou vestido de festa.
+3. No máximo 1 peça por categoria.
 4. Combine cores com harmonia e respeite o dress code da ocasião e o clima.
 5. Se faltar algo importante (ex.: sapato adequado, casaco para o frio), NÃO invente id: descreva em "missing_suggestions" uma sugestão genérica do que complementaria o look. Se não faltar nada, use null.
 6. "title": nome curto e charmoso (até 5 palavras). "description": 1-2 frases explicando por que funciona. "tips": 1 dica rápida de styling.
@@ -259,18 +310,25 @@ ${JSON.stringify(wardrobe)}
 Responda neste formato exato:
 {"title": string, "description": string, "item_ids": [string], "missing_suggestions": string | null, "tips": string}`;
 
-    const result = parseJSON(await askAI(prompt));
+    try {
+      result = parseJSON(await askAI(prompt));
+    } catch (e) {
+      await quota.refund(); // IA falhou: a tentativa não conta
+      throw e;
+    }
 
     // Validação: só ids reais, 1 por categoria (acessórios até 2),
     // e nunca peça única junto com top/bottom. Peças obrigatórias primeiro.
     const ids: string[] = [];
     // deno-lint-ignore no-explicit-any
     const catOf = (id: string) => (byId.get(id) as any).category as string;
+    const ACCESSORY = ['bag', 'jewelry', 'headwear', 'accessory'];
     const tryAdd = (id: unknown) => {
       if (typeof id !== 'string' || !byId.has(id) || ids.includes(id)) return;
       const cat = catOf(id);
       const same = ids.filter((i) => catOf(i) === cat).length;
-      if (same >= (cat === 'accessory' ? 2 : 1)) return;
+      if (same >= 1) return; // 1 peça por categoria
+      if (ACCESSORY.includes(cat) && ids.filter((i) => ACCESSORY.includes(catOf(i))).length >= 2) return;
       const hasFull = ids.some((i) => catOf(i) === 'fullbody');
       const hasTopBottom = ids.some((i) => ['top', 'bottom'].includes(catOf(i)));
       if (cat === 'fullbody' && hasTopBottom) return;
@@ -287,7 +345,7 @@ Responda neste formato exato:
       missing_suggestions: result.missing_suggestions
         ? short(result.missing_suggestions, 300) : null,
       tips: short(result.tips, 300),
-      quota,
+      quota: quota.info,
     });
   } catch (e) {
     if (e instanceof HttpError) return json({ error: e.message }, e.status);

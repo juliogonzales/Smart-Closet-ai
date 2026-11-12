@@ -30,14 +30,14 @@ class HttpError extends Error {
   }
 }
 
-const CATEGORIES = ['top', 'bottom', 'shoes', 'accessory', 'outerwear', 'fullbody'];
+const CATEGORIES = ['top', 'bottom', 'fullbody', 'outerwear', 'shoes', 'activewear', 'swimwear', 'bag', 'jewelry', 'headwear', 'accessory'];
 const COLORS = [
   'preto', 'branco', 'cinza', 'bege', 'marrom', 'azul', 'azul-marinho',
   'verde', 'vermelho', 'rosa', 'amarelo', 'laranja', 'roxo', 'jeans',
 ];
 const TAGS = [
-  'casual', 'formal', 'esporte fino', 'street', 'esportivo', 'festa',
-  'minimalista', 'clássico', 'verão', 'inverno', 'outono', 'primavera',
+  'casual', 'elegante', 'esporte fino', 'clássico', 'minimalista', 'streetwear',
+  'esportivo', 'boho', 'preppy', 'verão', 'inverno', 'outono', 'primavera',
 ];
 const MIMES = ['image/jpeg', 'image/png', 'image/webp'];
 
@@ -50,7 +50,7 @@ const PROMPT = `Analise a foto desta peça de vestuário e responda neste format
 
 - "name": nome curto em português (ex.: "Camisa social branca").
 - "category": exatamente um de ${JSON.stringify(CATEGORIES)}.
-  (top = camisa/camiseta/blusa; bottom = calça/saia/short; fullbody = vestido/macacão; outerwear = casaco/jaqueta/blazer; shoes = calçados; accessory = bolsa/cinto/relógio/joia/chapéu/óculos)
+  (top = camisa/camiseta/blusa/regata; bottom = calça/saia/short; fullbody = vestido/macacão/jardineira; outerwear = casaco/jaqueta/blazer/cardigan/terno; shoes = tênis/sapato/sandália/bota; activewear = roupa de treino/academia (legging, top esportivo, short de corrida); swimwear = biquíni/maiô/sunga/roupa de praia; bag = bolsa/mochila/carteira de mão; jewelry = joia/bijuteria/relógio; headwear = chapéu/boné/gorro; accessory = cinto/cachecol/gravata/óculos/outro acessório)
 - "colors": 1 a 3 cores predominantes, escolhidas somente de ${JSON.stringify(COLORS)}.
 - "tags": 2 a 5 itens escolhidos somente de ${JSON.stringify(TAGS)} (estilo e estação em que a peça é adequada).
 Se a foto não mostrar uma peça de roupa ou acessório, responda {"name": "", "category": null, "colors": [], "tags": []}.`;
@@ -60,7 +60,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 function friendlyAiError(provider: string, status: number, body: string) {
   console.error(`${provider} ${status}: ${body.slice(0, 400)}`);
   if (status === 429) {
-    return new HttpError(429, 'A IA está com muita demanda agora. Tente de novo em instantes.');
+    return new HttpError(429, 'A IA está ocupada agora (muitas pessoas usando ao mesmo tempo). Espere cerca de 1 minuto e tente de novo.');
   }
   if (status === 401 || status === 403 || /API key not valid|API_KEY_INVALID/i.test(body)) {
     return new HttpError(502, 'A chave da IA foi recusada. Confira o secret da chave nas Edge Functions.');
@@ -175,7 +175,7 @@ async function useQuota(supabase: any, userId: string) {
     .gte('created_at', since);
   if (error) {
     console.warn('ai_usage indisponível:', error.message);
-    return;
+    return { refund: async () => {} };
   }
   if ((count ?? 0) >= limit) {
     throw new HttpError(
@@ -183,7 +183,21 @@ async function useQuota(supabase: any, userId: string) {
       `Você usou as ${limit} análises de foto das últimas 24 horas. Preencha manualmente ou volte mais tarde.`,
     );
   }
-  await supabase.from('ai_usage').insert({ user_id: userId, kind: 'analyze' });
+  const { data: row } = await supabase
+    .from('ai_usage')
+    .insert({ user_id: userId, kind: 'analyze' })
+    .select('id')
+    .maybeSingle();
+  const refund = async () => {
+    if (!row?.id) return;
+    // Estorno pela chave de serviço no servidor (o usuário só insere e lê).
+    const admin = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    );
+    await admin.from('ai_usage').delete().eq('id', row.id).eq('user_id', userId);
+  };
+  return { refund };
 }
 
 Deno.serve(async (req) => {
@@ -206,9 +220,15 @@ Deno.serve(async (req) => {
     if (!MIMES.includes(mime)) throw new HttpError(400, 'Formato de imagem não suportado.');
     if (b64.length > 2_500_000) throw new HttpError(413, 'Imagem grande demais.');
 
-    await useQuota(supabase, u.user.id);
+    const quota = await useQuota(supabase, u.user.id);
 
-    const r = parseJSON(await askVision(b64, mime));
+    let r: any;
+    try {
+      r = parseJSON(await askVision(b64, mime));
+    } catch (e) {
+      await quota.refund(); // IA falhou: a análise não conta
+      throw e;
+    }
     const category = CATEGORIES.includes(r.category) ? r.category : null;
     const colors = (Array.isArray(r.colors) ? r.colors : [])
       .filter((c: string) => COLORS.includes(c)).slice(0, 3);

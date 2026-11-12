@@ -41,12 +41,17 @@ const sb = configured && window.supabase
 const CATEGORIES = {
   top: 'Parte de cima',
   bottom: 'Parte de baixo',
-  fullbody: 'Peça única',
-  outerwear: 'Casaco',
+  fullbody: 'Vestido e macacão',
+  outerwear: 'Casaco e blazer',
   shoes: 'Calçado',
-  accessory: 'Acessório',
+  activewear: 'Esporte',
+  swimwear: 'Praia',
+  bag: 'Bolsa',
+  jewelry: 'Joias e relógio',
+  headwear: 'Chapéu e boné',
+  accessory: 'Outros acessórios',
 };
-const CAT_ORDER = ['outerwear', 'top', 'fullbody', 'bottom', 'shoes', 'accessory'];
+const CAT_ORDER = ['outerwear', 'top', 'fullbody', 'bottom', 'shoes', 'activewear', 'swimwear', 'bag', 'jewelry', 'headwear', 'accessory'];
 const LGPD_VERSION = '1.1';
 const APP_VERSION = '2.0';
 // Preencha com o e-mail de contato para dúvidas de privacidade (ex.: 'voce@exemplo.com').
@@ -65,7 +70,8 @@ const TERMS_HTML = `
   <p><b>Seus direitos:</b> acessar, corrigir, excluir seus dados e retirar o consentimento a qualquer momento, em Perfil. Você pode excluir a conta inteira em Perfil > Excluir minha conta.</p>
   <p class="text-xs text-stone-500">Versão ${LGPD_VERSION}. O texto completo está em docs/TERMOS_LGPD.md no repositório.</p>`;
 const SEASONS = ['verão', 'outono', 'inverno', 'primavera'];
-const STYLES = ['casual', 'formal', 'esporte fino', 'street', 'esportivo', 'festa', 'minimalista', 'clássico'];
+// Estilos: uma lista só, usada nas peças e no perfil (o estilista depende disso)
+const STYLES = ['casual', 'elegante', 'esporte fino', 'clássico', 'minimalista', 'streetwear', 'esportivo', 'boho', 'preppy'];
 const THEMES = [
   { id: 'classico', name: 'Clássico', swatch: '#1c1917', meta: '#1c1917' },
   { id: 'por-do-sol', name: 'Pôr do sol', swatch: '#e11d48', meta: '#e11d48' },
@@ -214,15 +220,15 @@ function openThemeEditor() {
   paint();
 }
 
-const PROFILE_STYLES = ['casual', 'esporte fino', 'street', 'minimalista', 'clássico', 'esportivo', 'elegante', 'boho'];
+const PROFILE_STYLES = STYLES;
 const COLORS = {
   preto: '#111827', branco: '#ffffff', cinza: '#9ca3af', bege: '#d6c3a5', marrom: '#7c5a3c',
   azul: '#2563eb', 'azul-marinho': '#1e3a8a', verde: '#16a34a', vermelho: '#dc2626', rosa: '#f472b6',
   amarelo: '#facc15', laranja: '#fb923c', roxo: '#7c3aed', jeans: '#4b6a9b',
 };
 const OCCASIONS = [
-  'Dia a dia', 'Encontro casual', 'Reunião de trabalho', 'Festa à noite',
-  'Academia', 'Viagem', 'Evento formal', 'Fim de semana',
+  'Dia a dia', 'Trabalho', 'Encontro ou jantar', 'Festa ou evento',
+  'Academia', 'Viagem', 'Praia',
 ];
 const WEATHERS = [
   { id: 'frio', label: 'Frio' },
@@ -3371,8 +3377,8 @@ function openTerms() {
    Prévia do look: monta as peças umas sobre as outras, centralizadas.
    Usa só os recortes do guarda-roupa (fundo removido). Não usa foto de pessoa e não chama IA.
    ============================================================ */
-const LOOK_WIDTH = { outerwear: 0.76, top: 0.62, fullbody: 0.72, bottom: 0.58, shoes: 0.46 };
-const LOOK_STACK = ['outerwear', 'top', 'fullbody', 'bottom', 'shoes'];
+const LOOK_WIDTH = { outerwear: 0.76, top: 0.62, fullbody: 0.72, bottom: 0.58, shoes: 0.46, activewear: 0.62, swimwear: 0.62 };
+const LOOK_STACK = ['outerwear', 'top', 'fullbody', 'activewear', 'swimwear', 'bottom', 'shoes'];
 
 // Tenta carregar com CORS (permite salvar a imagem); se o servidor não enviar o cabeçalho, carrega sem ele.
 const loadAny = (url) => loadImg(url, true).catch(() => loadImg(url, false));
