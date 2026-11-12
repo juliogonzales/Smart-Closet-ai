@@ -2898,12 +2898,13 @@ async function renderAdmin() {
   view().innerHTML = `<div class="mt-24 text-center text-sm text-stone-500">Carregando painel…</div>`;
   const { data: isAdmin, error: adminErr } = await sb.rpc('is_app_admin');
   if (adminErr || !isAdmin) return adminDenied();
-  const [ov, us, rp] = await Promise.all([
+  const [ov, us, rp, au] = await Promise.all([
     sb.rpc('admin_overview'),
     sb.rpc('admin_users', { p_limit: 100 }),
     sb.rpc('admin_reports'),
+    sb.rpc('admin_audit_list', { p_limit: 30 }),
   ]);
-  const err = ov.error || us.error || rp.error;
+  const err = ov.error || us.error || rp.error || au.error;
   if (err) {
     view().innerHTML = `
       <div class="card mt-10 p-6">
@@ -2913,10 +2914,48 @@ async function renderAdmin() {
       </div>`;
     return;
   }
-  paintAdmin(ov.data || {}, us.data || [], rp.data || []);
+  paintAdmin(ov.data || {}, us.data || [], rp.data || [], au.data || []);
 }
 
-function paintAdmin(s, users, reports) {
+/* Ações sobre uma conta: passam pela função admin-actions, que confere o administrador */
+async function adminAction(action, uid, handle) {
+  const who = handle ? `@${handle}` : 'esta conta';
+  const titles = { suspend: 'Suspender conta', unsuspend: 'Reativar conta', reset_password: 'Redefinir senha', delete: 'Excluir conta' };
+  let reason = '';
+  if (action !== 'unsuspend') {
+    const r = await promptDialog({ title: titles[action], label: 'Motivo (fica registrado)', confirmLabel: 'Continuar', maxLength: 200 });
+    if (!r) return;
+    if (r.length < 3) return toast('Escreva o motivo (pelo menos 3 letras).', 'error');
+    reason = r;
+  }
+  const texts = {
+    suspend: `${who} não consegue entrar até você reativar a conta.`,
+    unsuspend: `${who} volta a conseguir entrar.`,
+    reset_password: `Um e-mail de redefinição de senha será enviado para ${who}. Você não vê o endereço nem a senha.`,
+    delete: `Isso apaga de forma definitiva a conta ${who}, com peças, looks e fotos. Não tem como desfazer.`,
+  };
+  const ok = await confirmDialog(texts[action], { title: titles[action], confirmLabel: 'Confirmar', danger: action === 'delete' });
+  if (!ok) return;
+  if (action === 'delete') {
+    const word = await promptDialog({ title: 'Confirmação final', label: 'Digite EXCLUIR para apagar a conta', confirmLabel: 'Excluir', maxLength: 10 });
+    if (word !== 'EXCLUIR') return toast('Exclusão cancelada.', 'error');
+  }
+  setBusy(true, 'Aguarde…');
+  const { error } = await sb.functions.invoke('admin-actions', {
+    body: { action, user_id: uid, reason, redirect_to: location.origin + location.pathname },
+  });
+  setBusy(false);
+  if (error) {
+    let msg = 'Não consegui concluir a ação.';
+    try { const j = await error.context.json(); if (j?.error) msg = j.error; } catch { /* mantém a mensagem padrão */ }
+    return toast(msg, 'error');
+  }
+  const done = { suspend: 'Conta suspensa', unsuspend: 'Conta reativada', reset_password: 'E-mail de redefinição enviado', delete: 'Conta excluída' };
+  toast(done[action], 'ok');
+  renderAdmin();
+}
+
+function paintAdmin(s, users, reports, audit = []) {
   const card = (label, value, sub) => `
     <div class="rounded-2xl border border-stone-200 p-3">
       <p class="text-xs text-stone-500">${esc(label)}</p>
@@ -2945,16 +2984,35 @@ function paintAdmin(s, users, reports) {
       </div>`).join('')
     : '<p class="text-sm text-stone-500">Nenhuma denúncia no momento.</p>';
 
+  const actBtn = (act, u, label, cls) =>
+    `<button class="${cls}" data-adm-act="${act}" data-uid="${esc(u.id)}" data-handle="${esc(u.handle || '')}">${label}</button>`;
   const usersHtml = users.length
     ? users.map((u) => `
-      <div class="flex items-center justify-between gap-2 border-b border-stone-100 py-2 text-sm">
-        <div class="min-w-0">
-          <p class="truncate">${esc(u.full_name || 'Sem nome')} <span class="text-stone-500">${u.handle ? '@' + esc(u.handle) : ''}</span></p>
-          <p class="text-xs text-stone-500">entrou em ${esc(when(u.created_at))}</p>
+      <div class="border-b border-stone-100 py-3 text-sm">
+        <div class="flex items-center justify-between gap-2">
+          <div class="min-w-0">
+            <p class="truncate">${esc(u.full_name || 'Sem nome')} <span class="text-stone-500">${u.handle ? '@' + esc(u.handle) : ''}</span>
+              ${u.suspended ? '<span class="ml-1 rounded-full bg-red-100 px-2 py-0.5 text-[11px] text-red-700">suspensa</span>' : ''}</p>
+            <p class="text-xs text-stone-500">entrou em ${esc(when(u.created_at))}</p>
+          </div>
+          <p class="shrink-0 text-right text-xs text-stone-600">${esc(String(u.clothes))} peças<br>${esc(String(u.looks))} looks · ${esc(String(u.shared))} no feed</p>
         </div>
-        <p class="shrink-0 text-right text-xs text-stone-600">${esc(String(u.clothes))} peças<br>${esc(String(u.looks))} looks · ${esc(String(u.shared))} no feed</p>
+        <div class="mt-2 grid grid-cols-3 gap-2">
+          ${u.suspended ? actBtn('unsuspend', u, 'Reativar', 'btn btn-soft') : actBtn('suspend', u, 'Suspender', 'btn btn-soft')}
+          ${actBtn('reset_password', u, 'Redefinir senha', 'btn btn-soft')}
+          ${actBtn('delete', u, 'Excluir', 'btn btn-ghost text-red-700')}
+        </div>
       </div>`).join('')
     : '<p class="text-sm text-stone-500">Nenhum usuário.</p>';
+
+  const actLabel = { suspend: 'Suspendeu', unsuspend: 'Reativou', reset_password: 'Enviou redefinição de senha para', delete: 'Excluiu' };
+  const auditHtml = audit.length
+    ? audit.map((a) => `
+      <div class="border-b border-stone-100 py-2 text-xs text-stone-600">
+        <p><b>${esc(actLabel[a.action] || a.action)}</b> ${a.target_handle ? '@' + esc(a.target_handle) : 'uma conta'}</p>
+        <p class="text-stone-500">${esc(new Date(a.created_at).toLocaleString('pt-BR'))}${a.reason ? ' · motivo: ' + esc(a.reason) : ''}</p>
+      </div>`).join('')
+    : '<p class="text-sm text-stone-500">Nenhuma ação registrada.</p>';
 
   view().innerHTML = `
     <div class="fade-up">
@@ -2977,7 +3035,13 @@ function paintAdmin(s, users, reports) {
 
       <h2 class="mt-8 text-sm font-semibold">Usuários (mais recentes)</h2>
       <div class="mt-2">${usersHtml}</div>
+
+      <h2 class="mt-8 text-sm font-semibold">Registro de ações</h2>
+      <p class="mt-1 text-xs text-stone-500">Toda ação sobre uma conta fica registrada aqui, com o motivo.</p>
+      <div class="mt-2">${auditHtml}</div>
     </div>`;
+
+  $$('[data-adm-act]').forEach((b) => (b.onclick = () => adminAction(b.dataset.admAct, b.dataset.uid, b.dataset.handle)));
 
   $$('[data-adm-hide]').forEach((b) => (b.onclick = async () => {
     const hide = b.dataset.val === 'true';
